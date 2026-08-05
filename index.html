@@ -1,0 +1,1100 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Bug Squasher</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;600;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #1e1e1e;
+    --panel: #252526;
+    --line: #4ec9b0;
+    --line2: #9cdcfe;
+    --bug: #e74c3c;
+    --crash: #ff3b3b;
+    --text: #d4d4d4;
+    --accent: #ffcc00;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; }
+  body {
+    margin: 0;
+    background: radial-gradient(ellipse at top, #2a2a35, #0c0c10 70%);
+    color: var(--text);
+    font-family: 'Vazirmatn', sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 16px;
+    min-height: 100vh;
+  }
+  h1 { font-size: 18px; margin: 0 0 2px; color: var(--accent); font-family: 'Vazirmatn', sans-serif; }
+  p.sub { color: #888; margin: 0 0 12px; font-size: 12px; }
+
+  .hud {
+    display: flex;
+    justify-content: space-between;
+    width: 360px;
+    max-width: 92vw;
+    margin-bottom: 8px;
+    font-size: 13px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .hud .rank { color: var(--line2); font-size: 11px; }
+  .hud .score { color: var(--accent); font-weight: 700; }
+  .hud .high { color: #888; font-size: 11px; }
+
+  /* Laptop bezel */
+  .laptop {
+    position: relative;
+    width: 360px;
+    max-width: 92vw;
+    background: linear-gradient(145deg, #3a3a3d, #18181a);
+    border-radius: 16px 16px 4px 4px;
+    padding: 10px 10px 4px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5), inset 0 0 0 1px #444;
+  }
+  .laptop .cam {
+    width: 6px; height: 6px;
+    background: #0a0a0a;
+    border: 1px solid #444;
+    border-radius: 50%;
+    margin: 0 auto 6px;
+  }
+  #gameWrap { position: relative; direction: ltr; }
+  canvas {
+    background: var(--bg);
+    border-radius: 4px;
+    display: block;
+    width: 100%;
+    touch-action: manipulation;
+    cursor: pointer;
+  }
+  .laptop-base {
+    height: 12px;
+    background: linear-gradient(145deg, #2c2c2e, #17171a);
+    border-radius: 0 0 8px 8px;
+    margin: 0 -10px;
+    position: relative;
+  }
+  .laptop-base::after {
+    content: '';
+    position: absolute;
+    left: 50%; top: 0;
+    transform: translateX(-50%);
+    width: 60px; height: 5px;
+    background: #111;
+    border-radius: 0 0 6px 6px;
+  }
+
+  .combo {
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: var(--accent);
+    font-weight: bold;
+    font-size: 14px;
+    font-family: 'JetBrains Mono', monospace;
+    opacity: 0;
+    transition: opacity 0.15s;
+    pointer-events: none;
+  }
+  .combo.show { opacity: 1; }
+
+  .toast {
+    position: absolute;
+    top: 42%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.8);
+    background: rgba(0,0,0,0.85);
+    border: 1px solid #eee;
+    color: #fff;
+    padding: 10px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    text-align: center;
+    opacity: 0;
+    transition: all 0.25s ease-out;
+    pointer-events: none;
+    z-index: 6;
+    white-space: nowrap;
+  }
+  .toast.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+
+  .hint {
+    text-align: center;
+    color: #666;
+    font-size: 11px;
+    margin-top: 12px;
+  }
+
+  .overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    padding: 20px;
+  }
+  .overlay.show { display: flex; }
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--crash);
+    border-radius: 10px;
+    padding: 24px;
+    text-align: center;
+    max-width: 320px;
+    width: 100%;
+  }
+  .card .crashTitle {
+    color: var(--crash);
+    font-size: 18px;
+    font-weight: bold;
+    margin-bottom: 4px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .card .crashMsg {
+    color: #999;
+    font-size: 12px;
+    margin-bottom: 16px;
+  }
+  .stackTrace {
+    background: #111;
+    border-radius: 6px;
+    padding: 12px;
+    font-size: 12px;
+    color: var(--line2);
+    line-height: 1.9;
+    margin-bottom: 16px;
+    direction: ltr;
+    text-align: left;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .stackTrace .k { color: #777; }
+  .stackTrace .v { color: var(--accent); }
+  button.restart {
+    background: var(--line);
+    color: #111;
+    border: none;
+    padding: 12px 26px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: bold;
+    cursor: pointer;
+    font-family: 'Vazirmatn', sans-serif;
+  }
+  button.restart:active { opacity: 0.85; }
+
+  .gameplay-ui { display: none; flex-direction: column; align-items: center; width: 100%; }
+  .gameplay-ui.active { display: flex; }
+
+  .btn-outline {
+    background: transparent;
+    color: var(--text);
+    border: 1px solid #444;
+  }
+  .btn-ghost {
+    background: transparent;
+    color: #888;
+    border: none;
+    font-size: 12px;
+    padding: 6px;
+  }
+  .menu-logo { font-size: 40px; margin-bottom: 4px; }
+  .menu-title { color: var(--accent); margin: 0 0 4px; font-size: 20px; }
+  .name-field { width: 100%; margin: 4px 0 14px; text-align: right; }
+  .name-field label { display: block; font-size: 11px; color: #888; margin-bottom: 6px; }
+  .name-field input {
+    width: 100%;
+    box-sizing: border-box;
+    background: #1b1b1c;
+    border: 1px solid #444;
+    color: var(--text);
+    border-radius: 6px;
+    padding: 10px 12px;
+    font-size: 14px;
+    font-family: 'Vazirmatn', sans-serif;
+    text-align: right;
+  }
+  .name-field input:focus { outline: none; border-color: var(--line); }
+  .name-field .warn { color: var(--crash); font-size: 11px; margin-top: 6px; display: none; }
+  .name-field.error input { border-color: var(--crash); }
+  .name-field.error .warn { display: block; }
+
+  .lb-you {
+    background: rgba(255,204,0,0.1);
+    border: 1px solid var(--accent);
+    border-radius: 6px;
+    padding: 8px 10px;
+    font-size: 12px;
+    color: var(--accent);
+    margin-bottom: 12px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .lb-list {
+    max-height: 260px;
+    overflow-y: auto;
+    text-align: right;
+    margin-bottom: 16px;
+    border-radius: 6px;
+    background: #111;
+  }
+  .lb-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    font-size: 13px;
+    border-bottom: 1px solid #222;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .lb-row:last-child { border-bottom: none; }
+  .lb-row .rk { color: #666; width: 26px; flex-shrink: 0; }
+  .lb-row .nm {
+    flex: 1;
+    color: var(--line2);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    text-align: right;
+    font-family: 'Vazirmatn', sans-serif;
+    font-size: 13px;
+  }
+  .lb-row .sc { color: var(--accent); font-weight: 700; }
+  .lb-row.me { background: rgba(255,204,0,0.08); }
+  .lb-row.top1 .rk { color: #ffd700; }
+  .lb-row.top2 .rk { color: #c0c0c0; }
+  .lb-row.top3 .rk { color: #cd7f32; }
+  .lb-empty { color: #666; font-size: 12px; padding: 20px 10px; text-align: center; }
+  .result-score {
+    font-size: 30px;
+    font-weight: 800;
+    color: var(--accent);
+    margin: 2px 0;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .result-best {
+    font-size: 12px;
+    color: #888;
+    margin-bottom: 14px;
+  }
+  .btn-row { display: flex; gap: 10px; margin-top: 4px; }
+  .btn-row button { flex: 1; }
+
+  .flash {
+    position: fixed;
+    inset: 0;
+    background: var(--crash);
+    opacity: 0;
+    pointer-events: none;
+    z-index: 5;
+  }
+  .flash.on { animation: flashAnim 0.25s ease-out; }
+  @keyframes flashAnim {
+    0% { opacity: 0.85; }
+    100% { opacity: 0; }
+  }
+  .shake { animation: shakeAnim 0.3s; }
+  @keyframes shakeAnim {
+    0%,100% { transform: translateX(0); }
+    20% { transform: translateX(-6px); }
+    40% { transform: translateX(5px); }
+    60% { transform: translateX(-4px); }
+    80% { transform: translateX(3px); }
+  }
+</style>
+</head>
+<body>
+
+  <!-- SPLASH -->
+  <div class="overlay show" id="splashScreen">
+    <div class="card" style="border-color: var(--line);">
+      <div class="menu-logo">🐞</div>
+      <h2 class="menu-title">Bug Squasher</h2>
+      <div style="color:#888; font-size:12px;">در حال بارگذاری...</div>
+    </div>
+  </div>
+
+  <!-- MAIN MENU -->
+  <div class="overlay" id="menuScreen">
+    <div class="card" style="border-color: var(--line);">
+      <div class="menu-logo">🐞</div>
+      <h2 class="menu-title">Bug Squasher</h2>
+      <p style="color:#888; font-size:12px; margin:0 0 14px;">قبل از کرش‌کردن کدت، باگ‌ها رو له کن</p>
+      <div class="name-field" id="nameField">
+        <label for="nameInput">اسمت رو وارد کن (توی جدول امتیازات نشون داده میشه)</label>
+        <input type="text" id="nameInput" maxlength="18" placeholder="مثلا: علی" autocomplete="off">
+        <div class="warn">برای شروع بازی، اول اسمت رو بنویس</div>
+      </div>
+      <div class="btn-row" style="flex-direction: column;">
+        <button class="restart" id="startBtn">▶ شروع بازی</button>
+        <button class="restart btn-outline" id="howToBtn">؟ چطور بازی کنم</button>
+        <button class="restart btn-outline" id="leaderboardBtn">🏆 جدول امتیازات</button>
+        <button class="btn-ghost" id="soundBtn">🔊 صدا: روشن</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- HOW TO PLAY -->
+  <div class="overlay" id="howtoScreen">
+    <div class="card">
+      <h2 class="menu-title" style="margin-top:0;">راهنمای بازی</h2>
+      <p style="color:#ccc; font-size:13px; line-height:2; text-align:right; margin-bottom:18px;">
+        🐞 روی کفش‌دوزک و عنکبوت‌ها مستقیم ضربه بزن<br>
+        ⏱️ قبل از رسیدنشون به خط قرمز، لهشون کن<br>
+        💥 اگه یکی رد بشه، کدت کرش می‌کنه و بازی تمومه<br>
+        🕷️ بعد از امتیاز ۵۰ مراقب عنکبوت‌های سریع باش
+      </p>
+      <button class="restart" id="howtoStartBtn">▶ باشه، بزن بریم</button>
+      <button class="btn-ghost" id="howtoBackBtn" style="display:block; margin:8px auto 0;">بازگشت به منو</button>
+    </div>
+  </div>
+
+  <!-- GAMEPLAY (hidden until Start is pressed) -->
+  <div class="gameplay-ui" id="gameplayUI">
+    <h1>🐞 Bug Squasher</h1>
+    <p class="sub">مستقیم روی کفش‌دوزک بزن قبل از رسیدن به خط قرمز کد</p>
+
+    <div class="hud" dir="ltr">
+      <span class="rank" id="rank">Junior Debugger</span>
+      <span class="score" id="score">0</span>
+      <span class="high">HI: <span id="highscore">0</span></span>
+    </div>
+
+    <div class="laptop" id="laptop">
+      <div class="cam"></div>
+      <div id="gameWrap">
+        <canvas id="game" width="360" height="480"></canvas>
+        <div class="combo" id="combo">Combo x1</div>
+        <div class="toast" id="toast">🕷️ عنکبوت سفید وارد شد!</div>
+      </div>
+      <div class="laptop-base"></div>
+    </div>
+
+    <p class="hint">👆 روی کفش‌دوزک ضربه بزن</p>
+  </div>
+
+  <div class="flash" id="flash"></div>
+
+  <!-- LEADERBOARD -->
+  <div class="overlay" id="leaderboardScreen">
+    <div class="card">
+      <h2 class="menu-title" style="margin-top:0;">🏆 جدول امتیازات</h2>
+      <div class="lb-you" id="lbYou" style="display:none;"></div>
+      <div class="lb-list" id="lbList">
+        <div class="lb-empty">در حال بارگذاری...</div>
+      </div>
+      <button class="restart" id="lbBackBtn">بازگشت</button>
+    </div>
+  </div>
+
+  <!-- RESULT SCREEN -->
+  <div class="overlay" id="overlay">
+    <div class="card">
+      <div class="crashTitle" id="crashTitle">Segmentation fault (core dumped)</div>
+      <div class="crashMsg" id="crashMsg">یک کفش‌دوزک به کدت نفوذ کرد</div>
+      <div class="result-score" id="finalScoreDisplay">0</div>
+      <div class="result-best">امتیاز نهایی — رکورد: <span id="bestScoreDisplay">0</span></div>
+      <div class="stackTrace">
+        <div><span class="k">&gt; Bugs Fixed:</span> <span class="v" id="statBugs">0</span></div>
+        <div><span class="k">&gt; Best Combo:</span> <span class="v" id="statCombo">0</span></div>
+        <div><span class="k">&gt; Rank:</span> <span class="v" id="statRank">Junior Debugger</span></div>
+        <div><span class="k">&gt; Status:</span> <span class="v" style="color:var(--crash)">TERMINATED</span></div>
+      </div>
+      <div class="btn-row">
+        <button class="restart btn-outline" id="backToMenuBtn">🏠 منو</button>
+        <button class="restart" id="replayBtn">▶ اجرای مجدد</button>
+      </div>
+      <button class="restart btn-outline" id="resultLeaderboardBtn" style="width:100%; margin-top:10px;">🏆 مشاهده جدول امتیازات</button>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+const W = canvas.width, H = canvas.height;
+const LANE_W = W / 2;
+const SCREEN_BOTTOM = H - 110;   // where the laptop "screen" content ends
+const ZONE_Y = SCREEN_BOTTOM - 60; // crash line, raised up for more reaction room
+const SPAWN_Y = 30;
+const BUG_R = 15; // bigger hit target for direct tapping
+
+const RANKS = [
+  { min: 0, name: 'Junior Debugger' },
+  { min: 15, name: 'Mid-level Fixer' },
+  { min: 35, name: 'Senior Bug Hunter' },
+  { min: 60, name: 'Principal Exterminator' },
+  { min: 100, name: 'Legendary 10x Engineer' },
+];
+
+const CODE_SNIPPETS = [
+  'const x = fetch(url)', 'if (user.isValid) {', 'return data.map(i =>',
+  'let sum = a + b;', 'export default App', 'try { await run() }',
+  'for (let i=0;i<n;i++)', 'class Bug extends Err', 'console.log(state)',
+  'npm install lodash', 'git commit -m "fix"', '// TODO: refactor this',
+];
+
+let bugs, particles, score, combo, bestCombo, highScore;
+let baseSpeed, spawnTimer, spawnInterval, running, lastTime;
+let playerName = '';
+let codeOffset = 0;
+let bugIdCounter = 0;
+let typeWobble = 0;
+let milestone20Applied = false;
+let spidersUnlocked = false;
+
+/* ---------------- AUDIO (synthesized, no files needed) ---------------- */
+let audioCtx = null;
+let muted = false;
+function ensureAudio() {
+  if (!audioCtx) {
+    try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+    catch (e) { audioCtx = null; }
+  }
+  if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+}
+function playSquash() {
+  if (!audioCtx || muted) return;
+  const t = audioCtx.currentTime;
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.type = 'square';
+  osc.frequency.setValueAtTime(700, t);
+  osc.frequency.exponentialRampToValueAtTime(180, t + 0.09);
+  gain.gain.setValueAtTime(0.15, t);
+  gain.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
+  osc.connect(gain); gain.connect(audioCtx.destination);
+  osc.start(t); osc.stop(t + 0.11);
+}
+function playCrash() {
+  if (!audioCtx || muted) return;
+  const t = audioCtx.currentTime;
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.type = 'sawtooth';
+  osc.frequency.setValueAtTime(300, t);
+  osc.frequency.exponentialRampToValueAtTime(40, t + 0.45);
+  gain.gain.setValueAtTime(0.22, t);
+  gain.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
+  osc.connect(gain); gain.connect(audioCtx.destination);
+  osc.start(t); osc.stop(t + 0.5);
+
+  const osc2 = audioCtx.createOscillator();
+  const gain2 = audioCtx.createGain();
+  osc2.type = 'square';
+  osc2.frequency.setValueAtTime(90, t);
+  gain2.gain.setValueAtTime(0.12, t);
+  gain2.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
+  osc2.connect(gain2); gain2.connect(audioCtx.destination);
+  osc2.start(t); osc2.stop(t + 0.25);
+}
+function playCombo() {
+  if (!audioCtx || muted) return;
+  const t = audioCtx.currentTime;
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.type = 'triangle';
+  osc.frequency.setValueAtTime(880, t);
+  osc.frequency.exponentialRampToValueAtTime(1400, t + 0.08);
+  gain.gain.setValueAtTime(0.1, t);
+  gain.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
+  osc.connect(gain); gain.connect(audioCtx.destination);
+  osc.start(t); osc.stop(t + 0.13);
+}
+
+/* ---------------- SUPABASE (shared leaderboard) ----------------
+   This is the only part of the game that needs to work across every
+   visitor's browser, so it can't use localStorage (that's per-device).
+   Fill SUPABASE_URL and SUPABASE_ANON_KEY in with your own free
+   Supabase project's values — see README.md for the setup steps.
+   Until they're filled in, the leaderboard screen shows a setup
+   notice instead of crashing, and the rest of the game is unaffected. */
+const SUPABASE_URL = "https://gdvqfbvpsoaytydxecrj.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdkdnFmYnZwc29heXR5ZHhlY3JqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU4ODQ3MzcsImV4cCI6MjEwMTQ2MDczN30.ajXc1w4QVIvTnEaT_La9p4oNAEaLr5Iuq0QiR8vrPms";
+const supabaseIsConfigured = SUPABASE_URL !== 'YOUR_SUPABASE_URL' && SUPABASE_ANON_KEY !== 'YOUR_SUPABASE_ANON_KEY';
+let db = null;
+if (supabaseIsConfigured) {
+  try {
+    const { createClient } = supabase;
+    db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  } catch (e) { db = null; }
+}
+
+/* ---------------- RANK / STORAGE ---------------- */
+function currentRank(s) {
+  let r = RANKS[0].name;
+  for (const rk of RANKS) if (s >= rk.min) r = rk.name;
+  return r;
+}
+function updateRankUI() { document.getElementById('rank').textContent = currentRank(score); }
+
+/* High score is per-device only, so it lives in localStorage — a
+   standard browser API that works the same on every static host. */
+async function loadHighScore() {
+  try { highScore = parseInt(localStorage.getItem('bug-squasher-highscore'), 10) || 0; }
+  catch (e) { highScore = 0; }
+  document.getElementById('highscore').textContent = highScore;
+}
+async function saveHighScoreIfNeeded() {
+  if (score > highScore) {
+    highScore = score;
+    document.getElementById('highscore').textContent = highScore;
+    try { localStorage.setItem('bug-squasher-highscore', String(highScore)); } catch (e) {}
+  }
+}
+
+/* ---------------- PLAYER NAME (per-device) ---------------- */
+async function loadPlayerName() {
+  try { playerName = localStorage.getItem('player-name') || ''; }
+  catch (e) { playerName = ''; }
+  document.getElementById('nameInput').value = playerName;
+}
+async function savePlayerName(name) {
+  playerName = name;
+  try { localStorage.setItem('player-name', name); } catch (e) {}
+}
+
+/* ---------------- LEADERBOARD (shared, via Supabase) ----------------
+   Each player's best score lives in one row keyed by their normalized
+   name, so re-submitting only overwrites when it's a new personal best. */
+function leaderboardKeyFor(name) {
+  return name.trim().toLowerCase();
+}
+async function submitScoreToLeaderboard(name, finalScore) {
+  if (!db || !name) return;
+  const key = leaderboardKeyFor(name);
+  try {
+    const { data: existing } = await db
+      .from('leaderboard')
+      .select('score')
+      .eq('name_key', key)
+      .maybeSingle();
+    const prevBest = existing ? existing.score : 0;
+    if (finalScore > prevBest) {
+      await db.from('leaderboard').upsert({
+        name_key: key,
+        name: name.trim(),
+        score: finalScore,
+        updated_at: new Date().toISOString()
+      });
+    }
+  } catch (e) { /* leaderboard write is best-effort, never blocks the game */ }
+}
+
+async function fetchLeaderboardEntries() {
+  if (!db) throw new Error('Supabase is not configured yet');
+  const { data, error } = await db
+    .from('leaderboard')
+    .select('name, score')
+    .order('score', { ascending: false })
+    .limit(50);
+  if (error) throw error;
+  return data || [];
+}
+
+function renderLeaderboardRow(entry, rank, isMe) {
+  const row = document.createElement('div');
+  row.className = 'lb-row' + (isMe ? ' me' : '') + (rank <= 3 ? ' top' + rank : '');
+  row.innerHTML =
+    '<span class="rk">#' + rank + '</span>' +
+    '<span class="nm"></span>' +
+    '<span class="sc">' + entry.score + '</span>';
+  row.querySelector('.nm').textContent = entry.name;
+  return row;
+}
+
+async function openLeaderboard() {
+  showScreen('leaderboard');
+  const listEl = document.getElementById('lbList');
+  const youEl = document.getElementById('lbYou');
+  youEl.style.display = 'none';
+
+  if (!db) {
+    listEl.innerHTML = '<div class="lb-empty">جدول امتیازات هنوز تنظیم نشده — طبق README.md یک پروژه رایگان Supabase بساز و تنظیماتش رو توی فایل جایگذاری کن.</div>';
+    return;
+  }
+
+  listEl.innerHTML = '<div class="lb-empty">در حال بارگذاری...</div>';
+
+  let entries = [];
+  try {
+    entries = await fetchLeaderboardEntries();
+  } catch (e) {
+    const detail = (e && (e.message || e.error_description || e.details)) || String(e);
+    console.error('Leaderboard fetch failed:', e);
+    listEl.innerHTML =
+      '<div class="lb-empty">مشکلی در بارگذاری جدول پیش اومد.<br>' +
+      '<span style="font-family:\'JetBrains Mono\',monospace; font-size:11px; color:#e06c6c; word-break:break-word;">' +
+      detail.replace(/[<>]/g, '') + '</span></div>';
+    return;
+  }
+
+  if (entries.length === 0) {
+    listEl.innerHTML = '<div class="lb-empty">هنوز کسی امتیازی ثبت نکرده. اولین نفر باش!</div>';
+    return;
+  }
+
+  const myKey = playerName ? leaderboardKeyFor(playerName) : null;
+  listEl.innerHTML = '';
+  let myRank = null;
+  entries.forEach((entry, i) => {
+    const rank = i + 1;
+    const isMe = myKey && leaderboardKeyFor(entry.name) === myKey;
+    if (isMe) myRank = rank;
+    listEl.appendChild(renderLeaderboardRow(entry, rank, isMe));
+  });
+
+  if (myRank) {
+    const mine = entries[myRank - 1];
+    youEl.textContent = 'رتبه تو: #' + myRank + ' از ' + entries.length + ' نفر — امتیاز: ' + mine.score;
+    youEl.style.display = 'block';
+  } else if (playerName) {
+    youEl.textContent = 'هنوز امتیازی برای «' + playerName + '» ثبت نشده. یه دور بازی کن!';
+    youEl.style.display = 'block';
+  }
+}
+
+/* ---------------- GAME LOGIC ---------------- */
+function makeBug(side, y) {
+  const isSpider = spidersUnlocked && Math.random() < 0.3;
+  return {
+    id: bugIdCounter++,
+    side,
+    y,
+    squashed: false,
+    wobble: Math.random() * 6.28,
+    type: isSpider ? 'spider' : 'ladybug',
+    r: isSpider ? 19 : 15,
+    speedMult: isSpider ? 1.35 : 1,
+    points: isSpider ? 3 : 1,
+  };
+}
+
+function spawnBug() {
+  const side = Math.random() < 0.5 ? 'left' : 'right';
+  bugs.push(makeBug(side, SPAWN_Y));
+  if (score > 50 && Math.random() < 0.25) {
+    const otherSide = side === 'left' ? 'right' : 'left';
+    bugs.push(makeBug(otherSide, SPAWN_Y - 30));
+  }
+}
+
+function bugPos(b) {
+  const x = b.side === 'left' ? LANE_W / 2 : LANE_W + LANE_W / 2;
+  return { x: x + Math.sin(b.wobble) * 6, y: b.y };
+}
+
+function addParticles(x, y, color, n = 10) {
+  for (let i = 0; i < n; i++) {
+    particles.push({ x, y, vx: (Math.random() - 0.5) * 4, vy: (Math.random() - 1) * 4, life: 1, color });
+  }
+}
+
+let toastTimeout;
+function showToast(text) {
+  const el = document.getElementById('toast');
+  el.textContent = text;
+  el.classList.add('show');
+  clearTimeout(toastTimeout);
+  toastTimeout = setTimeout(() => el.classList.remove('show'), 1600);
+}
+
+let comboTimeout;
+function showCombo() {
+  const el = document.getElementById('combo');
+  if (combo >= 3) {
+    el.textContent = 'Combo x' + combo;
+    el.classList.add('show');
+    clearTimeout(comboTimeout);
+    comboTimeout = setTimeout(() => el.classList.remove('show'), 700);
+    playCombo();
+  }
+}
+
+function squashBugAt(px, py) {
+  if (!running) return;
+  let target = null, bestDist = Infinity;
+  for (const b of bugs) {
+    if (b.squashed || b.y > SCREEN_BOTTOM) continue;
+    const p = bugPos(b);
+    const d = Math.hypot(p.x - px, p.y - py);
+    if (d < b.r + 10 && d < bestDist) { bestDist = d; target = b; }
+  }
+  if (target) {
+    target.squashed = true;
+    score += target.points;
+    combo++; bestCombo = Math.max(bestCombo, combo);
+    document.getElementById('score').textContent = score;
+    updateRankUI();
+    showCombo();
+    const p = bugPos(target);
+    addParticles(p.x, p.y, target.type === 'spider' ? '#eeeeee' : '#4ec9b0', target.type === 'spider' ? 16 : 10);
+    playSquash();
+
+    if (score % 10 === 0) {
+      baseSpeed += 0.35;
+      spawnInterval = Math.max(500, spawnInterval - 80);
+    }
+    // Milestone: bigger wave jump right at 20 squashed
+    if (!milestone20Applied && score >= 20) {
+      milestone20Applied = true;
+      baseSpeed += 0.6;
+      spawnInterval = Math.max(400, spawnInterval - 150);
+      showToast('⚡ سرعت ورود باگ‌ها بیشتر شد!');
+    }
+    // Milestone: white spiders join after 50 squashed
+    if (!spidersUnlocked && score >= 50) {
+      spidersUnlocked = true;
+      showToast('🕷️ عنکبوت سفید وارد شد!');
+    }
+  }
+}
+
+function crash() {
+  running = false;
+  saveHighScoreIfNeeded();
+  submitScoreToLeaderboard(playerName, score);
+  playCrash();
+  const flashEl = document.getElementById('flash');
+  flashEl.classList.add('on');
+  setTimeout(() => flashEl.classList.remove('on'), 260);
+  const laptop = document.getElementById('laptop');
+  laptop.classList.add('shake');
+  setTimeout(() => laptop.classList.remove('shake'), 300);
+
+  const messages = [
+    'Uncaught Bug: undefined is not a function',
+    'Segmentation fault (core dumped)',
+    'FATAL: ladybug injected into production',
+    'RangeError: too many bugs to handle'
+  ];
+  document.getElementById('crashTitle').textContent = messages[Math.floor(Math.random()*messages.length)];
+  document.getElementById('finalScoreDisplay').textContent = score;
+  document.getElementById('bestScoreDisplay').textContent = highScore;
+  document.getElementById('statBugs').textContent = score;
+  document.getElementById('statCombo').textContent = bestCombo;
+  document.getElementById('statRank').textContent = currentRank(score);
+  showScreen('result');
+}
+
+/* ---------------- DRAWING ---------------- */
+function drawScreenContent() {
+  // laptop screen area
+  ctx.fillStyle = '#1e1e1e';
+  ctx.fillRect(0, 0, W, SCREEN_BOTTOM);
+
+  ctx.strokeStyle = '#333';
+  ctx.beginPath(); ctx.moveTo(LANE_W, 0); ctx.lineTo(LANE_W, SCREEN_BOTTOM); ctx.stroke();
+
+  ctx.font = '12px "JetBrains Mono", monospace';
+  ctx.textBaseline = 'middle';
+  const lineHeight = 26;
+  const scrollSpeed = 0.6 + baseSpeed * 0.15;
+  codeOffset = (codeOffset + scrollSpeed) % lineHeight;
+
+  for (let lane = 0; lane < 2; lane++) {
+    ctx.fillStyle = lane === 0 ? 'rgba(78,201,176,0.55)' : 'rgba(156,220,254,0.55)';
+    const startX = lane === 0 ? 10 : LANE_W + 10;
+    let idx = 0;
+    for (let y = -lineHeight + codeOffset; y < SCREEN_BOTTOM; y += lineHeight) {
+      ctx.fillText(CODE_SNIPPETS[(idx + lane * 3) % CODE_SNIPPETS.length], startX, y);
+      idx++;
+    }
+  }
+
+  ctx.strokeStyle = 'rgba(255,204,0,0.6)';
+  ctx.setLineDash([4, 4]);
+  ctx.beginPath(); ctx.moveTo(0, ZONE_Y); ctx.lineTo(W, ZONE_Y); ctx.stroke();
+  ctx.setLineDash([]);
+}
+
+function drawBug(b) {
+  if (b.type === 'spider') { drawSpider(b); return; }
+  const p = bugPos(b);
+  ctx.save();
+  ctx.translate(p.x, p.y);
+  ctx.fillStyle = '#c0392b';
+  ctx.beginPath(); ctx.ellipse(0, 0, b.r * 0.8, b.r * 0.7, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#222';
+  ctx.beginPath(); ctx.ellipse(0, -b.r * 0.7, b.r * 0.45, b.r * 0.4, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = '#222'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(0, -b.r * 0.25); ctx.lineTo(0, b.r * 0.65); ctx.stroke();
+  ctx.fillStyle = '#111';
+  [[-3,-1],[3,-1],[-2.5,3],[2.5,3]].forEach(([sx,sy]) => {
+    ctx.beginPath(); ctx.arc(sx, sy, 1.6, 0, Math.PI * 2); ctx.fill();
+  });
+  ctx.restore();
+}
+
+function drawSpider(b) {
+  const p = bugPos(b);
+  const legPhase = Math.sin(b.wobble * 3) * 4;
+  ctx.save();
+  ctx.translate(p.x, p.y);
+
+  // legs (4 per side), white with faint gray outline
+  ctx.strokeStyle = '#f1f1f1';
+  ctx.lineWidth = 2;
+  for (let i = 0; i < 4; i++) {
+    const angle = -0.9 + i * 0.6;
+    const wob = (i % 2 === 0 ? legPhase : -legPhase);
+    [-1, 1].forEach(dir => {
+      ctx.beginPath();
+      ctx.moveTo(0, -2);
+      const kx = dir * (b.r * 0.5) * Math.cos(angle);
+      const ky = -2 + b.r * 0.35 * Math.sin(angle) + wob * 0.3;
+      const ex = dir * (b.r * 0.95) * Math.cos(angle);
+      const ey = -2 + b.r * 0.75 * Math.sin(angle) + wob;
+      ctx.quadraticCurveTo(kx, ky, ex, ey);
+      ctx.stroke();
+    });
+  }
+
+  // abdomen
+  ctx.fillStyle = '#f5f5f5';
+  ctx.beginPath(); ctx.ellipse(0, 4, b.r * 0.55, b.r * 0.5, 0, 0, Math.PI * 2); ctx.fill();
+  // head/cephalothorax
+  ctx.beginPath(); ctx.ellipse(0, -b.r * 0.35, b.r * 0.38, b.r * 0.32, 0, 0, Math.PI * 2); ctx.fill();
+  // outline for visibility on light body
+  ctx.strokeStyle = '#ccc'; ctx.lineWidth = 1;
+  ctx.stroke();
+  // eyes (red, small)
+  ctx.fillStyle = '#e74c3c';
+  ctx.beginPath(); ctx.arc(-3, -b.r * 0.35, 1.6, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(3, -b.r * 0.35, 1.6, 0, Math.PI * 2); ctx.fill();
+
+  ctx.restore();
+}
+
+function drawParticles(dt) {
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.x += p.vx; p.y += p.vy; p.vy += 0.15; p.life -= dt / 400;
+    if (p.life <= 0) { particles.splice(i, 1); continue; }
+    ctx.globalAlpha = Math.max(p.life, 0);
+    ctx.fillStyle = p.color;
+    ctx.fillRect(p.x - 2, p.y - 2, 4, 4);
+    ctx.globalAlpha = 1;
+  }
+}
+
+/* ---------------- RETRO PIXEL-ART PROGRAMMER SPRITE ---------------- */
+// Drawn at tiny native resolution, then scaled up with smoothing OFF —
+// this is the classic trick that gives genuine chunky 8-bit sprite look.
+const SPR_W = 24, SPR_H = 30;
+const spriteCanvas = document.createElement('canvas');
+spriteCanvas.width = SPR_W; spriteCanvas.height = SPR_H;
+const spriteCtx = spriteCanvas.getContext('2d');
+spriteCtx.imageSmoothingEnabled = false;
+
+function drawProgrammerSprite(handStep) {
+  const sc = spriteCtx;
+  sc.clearRect(0, 0, SPR_W, SPR_H);
+
+  // hoodie — staircase silhouette (authentic pixel-art construction)
+  sc.fillStyle = '#3b3b58';
+  sc.fillRect(4, 14, 16, 2);
+  sc.fillRect(2, 16, 20, 2);
+  sc.fillRect(0, 18, 24, 12);
+  sc.fillStyle = '#25253a'; // shade
+  sc.fillRect(0, 18, 4, 12);
+  sc.fillRect(2, 16, 2, 2);
+
+  // drawstrings
+  sc.fillStyle = '#111';
+  sc.fillRect(10, 14, 1, 4);
+  sc.fillRect(13, 14, 1, 4);
+
+  // neck + head
+  sc.fillStyle = '#eab676';
+  sc.fillRect(10, 11, 4, 3);
+  sc.fillRect(6, 2, 12, 10);
+
+  // hair
+  sc.fillStyle = '#2b1d14';
+  sc.fillRect(5, 0, 14, 4);
+  sc.fillRect(5, 4, 2, 4);
+  sc.fillRect(17, 4, 2, 4);
+
+  // headphones
+  sc.fillStyle = '#111';
+  sc.fillRect(5, 1, 14, 2);
+  sc.fillStyle = '#e63946';
+  sc.fillRect(3, 6, 3, 6);
+  sc.fillRect(18, 6, 3, 6);
+
+  // glasses catching screen glow
+  sc.fillStyle = '#8ecae6';
+  sc.fillRect(8, 8, 3, 3);
+  sc.fillRect(13, 8, 3, 3);
+  sc.fillStyle = '#111';
+  sc.fillRect(11, 9, 2, 1);
+
+  // hands — step between two positions for a chunky typing bounce
+  sc.fillStyle = '#eab676';
+  sc.fillRect(1, 27 - handStep, 3, 3);
+  sc.fillRect(20, 27 + handStep, 3, 3);
+}
+
+function drawDeskAndProgrammer() {
+  // desk area below the screen
+  const deskY = SCREEN_BOTTOM;
+  const grad = ctx.createLinearGradient(0, deskY, 0, H);
+  grad.addColorStop(0, '#3a2b20');
+  grad.addColorStop(1, '#241a13');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, deskY, W, H - deskY);
+
+  // keyboard hint (rows of keys)
+  const kbX = W / 2 - 70, kbY = deskY + 14, kw = 140, kh = 34;
+  ctx.fillStyle = '#111';
+  ctx.fillRect(kbX, kbY, kw, kh);
+  ctx.fillStyle = '#2a2a2a';
+  for (let r = 0; r < 3; r++) {
+    for (let c = 0; c < 9; c++) {
+      ctx.fillRect(kbX + 4 + c * 15, kbY + 4 + r * 10, 12, 7);
+    }
+  }
+
+  // programmer character peeking from bottom
+  const cx = W / 2;
+  const bobStep = Math.round(Math.sin(typeWobble)) * 5; // discrete jump, retro-style idle bob
+  const handStep = Math.floor(Math.abs(Math.sin(typeWobble * 2)) * 2); // 0,1,2 chunky steps
+
+  // soft blue glow cast by the screen onto the character
+  const glow = ctx.createRadialGradient(cx, deskY - 6, 4, cx, deskY - 6, 70);
+  glow.addColorStop(0, 'rgba(120,180,255,0.28)');
+  glow.addColorStop(1, 'rgba(120,180,255,0)');
+  ctx.fillStyle = glow;
+  ctx.fillRect(cx - 80, deskY - 40, 160, 110);
+
+  drawProgrammerSprite(handStep);
+  const SCALE = 5;
+  const destW = SPR_W * SCALE, destH = SPR_H * SCALE;
+  const destX = cx - destW / 2;
+  const destY = deskY - 40 + bobStep;
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(spriteCanvas, 0, 0, SPR_W, SPR_H, destX, destY, destW, destH);
+  ctx.imageSmoothingEnabled = true;
+}
+
+/* ---------------- MAIN LOOP ---------------- */
+function update(time = 0) {
+  if (!running) return;
+  const dt = Math.min(time - lastTime, 50);
+  lastTime = time;
+  typeWobble += dt / 250;
+
+  spawnTimer += dt;
+  if (spawnTimer > spawnInterval) { spawnTimer = 0; spawnBug(); }
+
+  const speed = (0.9 + baseSpeed) * (dt / 16.6);
+  for (const b of bugs) {
+    if (b.squashed) continue;
+    b.y += speed * b.speedMult;
+    b.wobble += 0.15;
+    if (b.y > SCREEN_BOTTOM - 6) { crash(); return; }
+  }
+  bugs = bugs.filter(b => !b.squashed);
+
+  drawScreenContent();
+  bugs.forEach(drawBug);
+  drawParticles(dt);
+  drawDeskAndProgrammer();
+
+  requestAnimationFrame(update);
+}
+
+function getCanvasPos(evt) {
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = W / rect.width, scaleY = H / rect.height;
+  const clientX = evt.touches ? evt.touches[0].clientX : evt.clientX;
+  const clientY = evt.touches ? evt.touches[0].clientY : evt.clientY;
+  return { x: (clientX - rect.left) * scaleX, y: (clientY - rect.top) * scaleY };
+}
+
+canvas.addEventListener('pointerdown', (e) => {
+  ensureAudio();
+  const pos = getCanvasPos(e);
+  squashBugAt(pos.x, pos.y);
+});
+
+async function startGame() {
+  bugs = []; particles = [];
+  score = 0; combo = 0; bestCombo = 0;
+  baseSpeed = 0; spawnTimer = 0; spawnInterval = 1400;
+  lastTime = 0; typeWobble = 0;
+  milestone20Applied = false; spidersUnlocked = false;
+  document.getElementById('score').textContent = '0';
+  updateRankUI();
+  await loadHighScore();
+  running = true;
+  requestAnimationFrame(update);
+}
+
+/* ---------------- SCREEN STATE MACHINE ---------------- */
+function showScreen(name) {
+  document.getElementById('splashScreen').classList.remove('show');
+  document.getElementById('menuScreen').classList.remove('show');
+  document.getElementById('howtoScreen').classList.remove('show');
+  document.getElementById('leaderboardScreen').classList.remove('show');
+  document.getElementById('overlay').classList.remove('show');
+  document.getElementById('gameplayUI').classList.remove('active');
+
+  if (name === 'splash') document.getElementById('splashScreen').classList.add('show');
+  if (name === 'menu') document.getElementById('menuScreen').classList.add('show');
+  if (name === 'howto') document.getElementById('howtoScreen').classList.add('show');
+  if (name === 'leaderboard') document.getElementById('leaderboardScreen').classList.add('show');
+  if (name === 'playing') document.getElementById('gameplayUI').classList.add('active');
+  if (name === 'result') {
+    document.getElementById('gameplayUI').classList.add('active');
+    document.getElementById('overlay').classList.add('show');
+  }
+}
+
+async function beginPlaying() {
+  ensureAudio();
+  const nameField = document.getElementById('nameField');
+  const nameVal = document.getElementById('nameInput').value.trim();
+  if (!nameVal) {
+    nameField.classList.add('error');
+    document.getElementById('nameInput').focus();
+    showScreen('menu');
+    return;
+  }
+  nameField.classList.remove('error');
+  await savePlayerName(nameVal);
+  showScreen('playing');
+  startGame();
+}
+
+document.getElementById('startBtn').addEventListener('click', beginPlaying);
+document.getElementById('howToBtn').addEventListener('click', () => showScreen('howto'));
+document.getElementById('howtoStartBtn').addEventListener('click', beginPlaying);
+document.getElementById('howtoBackBtn').addEventListener('click', () => showScreen('menu'));
+document.getElementById('replayBtn').addEventListener('click', beginPlaying);
+document.getElementById('backToMenuBtn').addEventListener('click', () => showScreen('menu'));
+document.getElementById('leaderboardBtn').addEventListener('click', openLeaderboard);
+document.getElementById('resultLeaderboardBtn').addEventListener('click', openLeaderboard);
+document.getElementById('lbBackBtn').addEventListener('click', () => showScreen('menu'));
+document.getElementById('soundBtn').addEventListener('click', (e) => {
+  muted = !muted;
+  e.target.textContent = muted ? '🔇 صدا: خاموش' : '🔊 صدا: روشن';
+  if (!muted) ensureAudio();
+});
+document.getElementById('nameInput').addEventListener('input', () => {
+  document.getElementById('nameField').classList.remove('error');
+});
+
+// Loading splash, then hand off to the main menu — completes the required MVP flow
+loadPlayerName();
+setTimeout(() => showScreen('menu'), 1200);
+</script>
+</body>
+</html>
