@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#0c0c10">
 <title>Bug Squasher</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;600;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
@@ -68,7 +69,7 @@
     border-radius: 4px;
     display: block;
     width: 100%;
-    touch-action: manipulation;
+    touch-action: none;
     cursor: pointer;
   }
   .laptop-base {
@@ -97,11 +98,12 @@
     font-weight: bold;
     font-size: 14px;
     font-family: 'JetBrains Mono', monospace;
-    opacity: 0;
-    transition: opacity 0.15s;
+    opacity: 1;
+    transition: transform 0.15s ease, color 0.25s ease;
     pointer-events: none;
   }
-  .combo.show { opacity: 1; }
+  .combo.pulse { transform: translateX(-50%) scale(1.4); }
+  .combo.reset { color: var(--crash); }
 
   .toast {
     position: absolute;
@@ -124,6 +126,37 @@
   }
   .toast.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
 
+  .rescueBtn {
+    position: absolute;
+    bottom: 10px;
+    left: 50%;
+    transform: translateX(-50%) scale(0.7);
+    background: #0f2a33;
+    border: 2px solid var(--line2);
+    color: var(--line2);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 15px;
+    font-weight: 700;
+    padding: 13px 26px;
+    min-height: 48px;
+    border-radius: 28px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s, transform 0.2s;
+    z-index: 6;
+    cursor: pointer;
+  }
+  .rescueBtn.show {
+    opacity: 1;
+    transform: translateX(-50%) scale(1);
+    pointer-events: auto;
+    animation: rescuePulse 1.1s ease-in-out infinite;
+  }
+  @keyframes rescuePulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(156,220,254,0.5); }
+    50% { box-shadow: 0 0 0 8px rgba(156,220,254,0); }
+  }
+
   .hint {
     text-align: center;
     color: #666;
@@ -135,13 +168,29 @@
     position: fixed;
     inset: 0;
     background: rgba(0,0,0,0.85);
-    display: none;
+    display: flex;
     align-items: center;
     justify-content: center;
     z-index: 10;
     padding: 20px;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.25s ease, visibility 0s linear 0.25s;
   }
-  .overlay.show { display: flex; }
+  .overlay.show {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transition: opacity 0.25s ease, visibility 0s linear 0s;
+  }
+  .overlay .card {
+    transform: scale(0.94) translateY(6px);
+    transition: transform 0.25s ease;
+  }
+  .overlay.show .card {
+    transform: scale(1) translateY(0);
+  }
   .card {
     background: var(--panel);
     border: 1px solid var(--crash);
@@ -202,8 +251,13 @@
     background: transparent;
     color: #888;
     border: none;
-    font-size: 12px;
-    padding: 6px;
+    font-size: 13px;
+    padding: 12px 10px;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
   }
   .menu-logo { font-size: 40px; margin-bottom: 4px; }
   .menu-title { color: var(--accent); margin: 0 0 4px; font-size: 20px; }
@@ -295,8 +349,16 @@
     z-index: 5;
   }
   .flash.on { animation: flashAnim 0.25s ease-out; }
+  .flash.warn { background: var(--accent); }
+  .flash.warn.on { animation: flashWarnAnim 0.3s ease-out; }
+  .flash.rescue { background: var(--line2); }
+  .flash.rescue.on { animation: flashWarnAnim 0.35s ease-out; }
   @keyframes flashAnim {
     0% { opacity: 0.85; }
+    100% { opacity: 0; }
+  }
+  @keyframes flashWarnAnim {
+    0% { opacity: 0.35; }
     100% { opacity: 0; }
   }
   .shake { animation: shakeAnim 0.3s; }
@@ -336,6 +398,7 @@
         <button class="restart btn-outline" id="howToBtn">؟ چطور بازی کنم</button>
         <button class="restart btn-outline" id="leaderboardBtn">🏆 جدول امتیازات</button>
         <button class="btn-ghost" id="soundBtn">🔊 صدا: روشن</button>
+        <button class="btn-ghost" id="hapticsBtn">📳 ویبره: روشن</button>
       </div>
     </div>
   </div>
@@ -348,6 +411,8 @@
         🐞 روی کفش‌دوزک و عنکبوت‌ها مستقیم ضربه بزن<br>
         ⏱️ قبل از رسیدنشون به خط قرمز، لهشون کن<br>
         💥 اگه یکی رد بشه، کدت کرش می‌کنه و بازی تمومه<br>
+        ✅ به تیک‌های سبز (کد سالم) دست نزن — کامبوت رو صفر می‌کنه<br>
+        🧹 با کامبوی ۸+ دکمه‌ی Ctrl+Z فعال میشه — صفحه رو پاک می‌کنه<br>
         🕷️ بعد از امتیاز ۵۰ مراقب عنکبوت‌های سریع باش
       </p>
       <button class="restart" id="howtoStartBtn">▶ باشه، بزن بریم</button>
@@ -370,8 +435,9 @@
       <div class="cam"></div>
       <div id="gameWrap">
         <canvas id="game" width="360" height="480"></canvas>
-        <div class="combo" id="combo">Combo x1</div>
+        <div class="combo" id="combo">Combo x0</div>
         <div class="toast" id="toast">🕷️ عنکبوت سفید وارد شد!</div>
+        <button class="rescueBtn" id="rescueBtn">🧹 Ctrl+Z</button>
       </div>
       <div class="laptop-base"></div>
     </div>
@@ -402,6 +468,7 @@
       <div class="result-best">امتیاز نهایی — رکورد: <span id="bestScoreDisplay">0</span></div>
       <div class="stackTrace">
         <div><span class="k">&gt; Bugs Fixed:</span> <span class="v" id="statBugs">0</span></div>
+        <div><span class="k">&gt; Total (all-time):</span> <span class="v" id="statTotalBugs">—</span></div>
         <div><span class="k">&gt; Best Combo:</span> <span class="v" id="statCombo">0</span></div>
         <div><span class="k">&gt; Rank:</span> <span class="v" id="statRank">Junior Debugger</span></div>
         <div><span class="k">&gt; Status:</span> <span class="v" style="color:var(--crash)">TERMINATED</span></div>
@@ -417,6 +484,18 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 const canvas = document.getElementById('game');
+// The play area's HEIGHT adapts to the phone's actual screen — width stays
+// fixed at 360 (every lane/desk/keyboard coordinate below is tuned for
+// that width), but on a tall Android screen we now use the extra vertical
+// room instead of leaving empty space above and below a fixed 480px box.
+// This also means more fall distance = more reaction time on tall phones.
+(function sizeCanvasToScreen() {
+  const RESERVED_CHROME = 180; // header + HUD + hint text + laptop bezel padding
+  const availableH = window.innerHeight - RESERVED_CHROME;
+  const targetH = Math.round(Math.max(480, Math.min(760, availableH)));
+  canvas.width = 360;
+  canvas.height = targetH;
+})();
 const ctx = canvas.getContext('2d');
 const W = canvas.width, H = canvas.height;
 const LANE_W = W / 2;
@@ -446,12 +525,34 @@ let playerName = '';
 let codeOffset = 0;
 let bugIdCounter = 0;
 let typeWobble = 0;
-let milestone20Applied = false;
-let spidersUnlocked = false;
+let spidersSeen = false;
+
+// Smooth difficulty curve tuning — pure functions of score, no step jumps.
+const SPEED_PER_POINT = 0.028;
+const MAX_SPEED = 3.4;
+const START_SPAWN_INTERVAL = 1400;
+const MIN_SPAWN_INTERVAL = 420;
+const INTERVAL_PER_POINT = 8;
+let rescueCharged = false;
+const RESCUE_THRESHOLD = 8;
 
 /* ---------------- AUDIO (synthesized, no files needed) ---------------- */
 let audioCtx = null;
 let muted = false;
+let hapticsEnabled = true;
+
+/* ---------------- HAPTICS ----------------
+   navigator.vibrate() is the standard web API and already works inside
+   an Android WebView (Capacitor's default webview included). When this
+   project moves to Capacitor, swap the body of vibrate() for
+   Haptics.impact({ style: ... }) from @capacitor/haptics — every call
+   site below stays the same. */
+function vibrate(pattern) {
+  if (!hapticsEnabled) return;
+  try {
+    if (navigator.vibrate) navigator.vibrate(pattern);
+  } catch (e) { /* unsupported device/browser — fail silently */ }
+}
 function ensureAudio() {
   if (!audioCtx) {
     try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
@@ -471,6 +572,33 @@ function playSquash() {
   gain.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
   osc.connect(gain); gain.connect(audioCtx.destination);
   osc.start(t); osc.stop(t + 0.11);
+}
+function playTrapHit() {
+  if (!audioCtx || muted) return;
+  const t = audioCtx.currentTime;
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.type = 'triangle';
+  osc.frequency.setValueAtTime(160, t);
+  osc.frequency.exponentialRampToValueAtTime(90, t + 0.18);
+  gain.gain.setValueAtTime(0.18, t);
+  gain.gain.exponentialRampToValueAtTime(0.001, t + 0.2);
+  osc.connect(gain); gain.connect(audioCtx.destination);
+  osc.start(t); osc.stop(t + 0.2);
+}
+function playRescue() {
+  if (!audioCtx || muted) return;
+  const t = audioCtx.currentTime;
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(300, t);
+  osc.frequency.exponentialRampToValueAtTime(900, t + 0.25);
+  gain.gain.setValueAtTime(0.001, t);
+  gain.gain.linearRampToValueAtTime(0.18, t + 0.05);
+  gain.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
+  osc.connect(gain); gain.connect(audioCtx.destination);
+  osc.start(t); osc.stop(t + 0.3);
 }
 function playCrash() {
   if (!audioCtx || muted) return;
@@ -562,29 +690,38 @@ async function savePlayerName(name) {
 
 /* ---------------- LEADERBOARD (shared, via Supabase) ----------------
    Each player's best score lives in one row keyed by their normalized
-   name, so re-submitting only overwrites when it's a new personal best. */
+   name, so re-submitting only overwrites the score column when it's a
+   new personal best. total_bugs, however, is a running lifetime sum —
+   every session adds to it regardless of whether it beat the record.
+   NOTE: requires a `total_bugs` integer column (default 0) on the
+   `leaderboard` table — see README.md for the migration SQL. */
 function leaderboardKeyFor(name) {
   return name.trim().toLowerCase();
 }
-async function submitScoreToLeaderboard(name, finalScore) {
-  if (!db || !name) return;
+async function syncPlayerStats(name, sessionScore) {
+  if (!db || !name) return null;
   const key = leaderboardKeyFor(name);
   try {
     const { data: existing } = await db
       .from('leaderboard')
-      .select('score')
+      .select('score, total_bugs')
       .eq('name_key', key)
       .maybeSingle();
     const prevBest = existing ? existing.score : 0;
-    if (finalScore > prevBest) {
-      await db.from('leaderboard').upsert({
-        name_key: key,
-        name: name.trim(),
-        score: finalScore,
-        updated_at: new Date().toISOString()
-      });
-    }
-  } catch (e) { /* leaderboard write is best-effort, never blocks the game */ }
+    const prevTotal = existing ? (existing.total_bugs || 0) : 0;
+    const newBest = Math.max(prevBest, sessionScore);
+    const newTotal = prevTotal + sessionScore;
+    await db.from('leaderboard').upsert({
+      name_key: key,
+      name: name.trim(),
+      score: newBest,
+      total_bugs: newTotal,
+      updated_at: new Date().toISOString()
+    });
+    return newTotal;
+  } catch (e) {
+    return null; // best-effort, never blocks the game
+  }
 }
 
 async function fetchLeaderboardEntries() {
@@ -662,26 +799,40 @@ async function openLeaderboard() {
 
 /* ---------------- GAME LOGIC ---------------- */
 function makeBug(side, y) {
-  const isSpider = spidersUnlocked && Math.random() < 0.3;
+  // Smooth, continuous ramp instead of a hard on/off switch — spiders start
+  // appearing rarely from score 40 and become common by score ~90.
+  const spiderChance = Math.min(0.3, Math.max(0, (score - 40) / 150));
+  const isSpider = Math.random() < spiderChance;
+  const isTrap = !isSpider && score >= 5 && Math.random() < 0.2;
   return {
     id: bugIdCounter++,
     side,
     y,
     squashed: false,
     wobble: Math.random() * 6.28,
-    type: isSpider ? 'spider' : 'ladybug',
-    r: isSpider ? 19 : 15,
-    speedMult: isSpider ? 1.35 : 1,
+    type: isTrap ? 'trap' : (isSpider ? 'spider' : 'ladybug'),
+    r: isTrap ? 16 : (isSpider ? 19 : 15),
+    speedMult: isTrap ? 0.85 : (isSpider ? 1.35 : 1),
     points: isSpider ? 3 : 1,
   };
 }
 
 function spawnBug() {
   const side = Math.random() < 0.5 ? 'left' : 'right';
-  bugs.push(makeBug(side, SPAWN_Y));
+  const bug = makeBug(side, SPAWN_Y);
+  bugs.push(bug);
+  if (bug.type === 'spider' && !spidersSeen) {
+    spidersSeen = true;
+    showToast('🕷️ عنکبوت سفید وارد شد!');
+  }
   if (score > 50 && Math.random() < 0.25) {
     const otherSide = side === 'left' ? 'right' : 'left';
-    bugs.push(makeBug(otherSide, SPAWN_Y - 30));
+    const bug2 = makeBug(otherSide, SPAWN_Y - 30);
+    bugs.push(bug2);
+    if (bug2.type === 'spider' && !spidersSeen) {
+      spidersSeen = true;
+      showToast('🕷️ عنکبوت سفید وارد شد!');
+    }
   }
 }
 
@@ -705,16 +856,20 @@ function showToast(text) {
   toastTimeout = setTimeout(() => el.classList.remove('show'), 1600);
 }
 
-let comboTimeout;
-function showCombo() {
+function updateComboDisplay(pulse, isReset) {
   const el = document.getElementById('combo');
-  if (combo >= 3) {
-    el.textContent = 'Combo x' + combo;
-    el.classList.add('show');
-    clearTimeout(comboTimeout);
-    comboTimeout = setTimeout(() => el.classList.remove('show'), 700);
-    playCombo();
+  el.textContent = 'Combo x' + combo;
+  if (pulse) {
+    el.classList.add('pulse');
+    clearTimeout(updateComboDisplay._pulseT);
+    updateComboDisplay._pulseT = setTimeout(() => el.classList.remove('pulse'), 150);
   }
+  if (isReset) {
+    el.classList.add('reset');
+    clearTimeout(updateComboDisplay._resetT);
+    updateComboDisplay._resetT = setTimeout(() => el.classList.remove('reset'), 400);
+  }
+  if (combo >= 3) playCombo();
 }
 
 function squashBugAt(px, py) {
@@ -726,41 +881,78 @@ function squashBugAt(px, py) {
     const d = Math.hypot(p.x - px, p.y - py);
     if (d < b.r + 10 && d < bestDist) { bestDist = d; target = b; }
   }
-  if (target) {
-    target.squashed = true;
-    score += target.points;
-    combo++; bestCombo = Math.max(bestCombo, combo);
-    document.getElementById('score').textContent = score;
-    updateRankUI();
-    showCombo();
-    const p = bugPos(target);
-    addParticles(p.x, p.y, target.type === 'spider' ? '#eeeeee' : '#4ec9b0', target.type === 'spider' ? 16 : 10);
-    playSquash();
+  if (!target) return;
+  target.squashed = true;
 
-    if (score % 10 === 0) {
-      baseSpeed += 0.35;
-      spawnInterval = Math.max(500, spawnInterval - 80);
-    }
-    // Milestone: bigger wave jump right at 20 squashed
-    if (!milestone20Applied && score >= 20) {
-      milestone20Applied = true;
-      baseSpeed += 0.6;
-      spawnInterval = Math.max(400, spawnInterval - 150);
-      showToast('⚡ سرعت ورود باگ‌ها بیشتر شد!');
-    }
-    // Milestone: white spiders join after 50 squashed
-    if (!spidersUnlocked && score >= 50) {
-      spidersUnlocked = true;
-      showToast('🕷️ عنکبوت سفید وارد شد!');
-    }
+  if (target.type === 'trap') {
+    // Hitting a passing test / healthy code: punish, don't reward.
+    combo = 0;
+    if (rescueCharged) { rescueCharged = false; document.getElementById('rescueBtn').classList.remove('show'); }
+    updateComboDisplay(false, true);
+    const p = bugPos(target);
+    addParticles(p.x, p.y, '#ff3b3b', 10);
+    playTrapHit();
+    vibrate(40);
+    showToast('⚠️ این کد سالم بود! کامبو از دست رفت');
+    flashDanger();
+    return;
   }
+
+  score += target.points;
+  combo++; bestCombo = Math.max(bestCombo, combo);
+  document.getElementById('score').textContent = score;
+  updateRankUI();
+  updateComboDisplay(true, false);
+  vibrate(10);
+  if (!rescueCharged && combo >= RESCUE_THRESHOLD) {
+    rescueCharged = true;
+    document.getElementById('rescueBtn').classList.add('show');
+    showToast('🧹 Ctrl+Z آماده‌ست — صفحه رو پاک کن!');
+    vibrate([0, 15, 60, 15]);
+  }
+  const p = bugPos(target);
+  addParticles(p.x, p.y, target.type === 'spider' ? '#eeeeee' : '#4ec9b0', target.type === 'spider' ? 16 : 10);
+  playSquash();
+
+  // Smooth, continuous difficulty ramp — no sudden jumps, just a steady
+  // linear increase in speed and spawn rate as score climbs.
+  baseSpeed = Math.min(MAX_SPEED, score * SPEED_PER_POINT);
+  spawnInterval = Math.max(MIN_SPAWN_INTERVAL, START_SPAWN_INTERVAL - score * INTERVAL_PER_POINT);
+}
+
+function flashDanger() {
+  const flashEl = document.getElementById('flash');
+  flashEl.classList.add('warn', 'on');
+  setTimeout(() => flashEl.classList.remove('warn', 'on'), 300);
+}
+
+function flashRescue() {
+  const flashEl = document.getElementById('flash');
+  flashEl.classList.add('rescue', 'on');
+  setTimeout(() => flashEl.classList.remove('rescue', 'on'), 350);
+}
+
+function performRescue() {
+  if (!running || !rescueCharged) return;
+  for (const b of bugs) {
+    if (b.squashed) continue;
+    const p = bugPos(b);
+    addParticles(p.x, p.y, '#9cdcfe', 6);
+  }
+  bugs = [];
+  rescueCharged = false;
+  document.getElementById('rescueBtn').classList.remove('show');
+  playRescue();
+  vibrate([0, 20, 40, 20]);
+  flashRescue();
+  showToast('🧹 صفحه پاک شد!');
 }
 
 function crash() {
   running = false;
   saveHighScoreIfNeeded();
-  submitScoreToLeaderboard(playerName, score);
   playCrash();
+  vibrate([0, 50, 40, 80]);
   const flashEl = document.getElementById('flash');
   flashEl.classList.add('on');
   setTimeout(() => flashEl.classList.remove('on'), 260);
@@ -780,6 +972,14 @@ function crash() {
   document.getElementById('statBugs').textContent = score;
   document.getElementById('statCombo').textContent = bestCombo;
   document.getElementById('statRank').textContent = currentRank(score);
+
+  // Total-bugs is a network round-trip, so it starts as a placeholder and
+  // fills in a moment later — everything else on this screen is instant.
+  const totalEl = document.getElementById('statTotalBugs');
+  totalEl.textContent = db ? '…' : '—';
+  syncPlayerStats(playerName, score).then(total => {
+    totalEl.textContent = (total !== null) ? total : '—';
+  });
   showScreen('result');
 }
 
@@ -816,6 +1016,7 @@ function drawScreenContent() {
 
 function drawBug(b) {
   if (b.type === 'spider') { drawSpider(b); return; }
+  if (b.type === 'trap') { drawTrap(b); return; }
   const p = bugPos(b);
   ctx.save();
   ctx.translate(p.x, p.y);
@@ -872,6 +1073,39 @@ function drawSpider(b) {
   ctx.restore();
 }
 
+function drawTrap(b) {
+  const p = bugPos(b);
+  const pulse = 1 + Math.sin(b.wobble * 2) * 0.06;
+  ctx.save();
+  ctx.translate(p.x, p.y);
+  ctx.scale(pulse, pulse);
+
+  const s = b.r * 1.05;
+  ctx.shadowColor = 'rgba(78,201,176,0.65)';
+  ctx.shadowBlur = 10;
+  ctx.fillStyle = '#123b30';
+  ctx.strokeStyle = '#4ec9b0';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  if (ctx.roundRect) ctx.roundRect(-s, -s, s * 2, s * 2, 6);
+  else ctx.rect(-s, -s, s * 2, s * 2);
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.shadowBlur = 0;
+  ctx.strokeStyle = '#4ec9b0';
+  ctx.lineWidth = 2.5;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.beginPath();
+  ctx.moveTo(-s * 0.45, 0.05 * s);
+  ctx.lineTo(-s * 0.1, s * 0.4);
+  ctx.lineTo(s * 0.5, -s * 0.4);
+  ctx.stroke();
+
+  ctx.restore();
+}
+
 function drawParticles(dt) {
   for (let i = particles.length - 1; i >= 0; i--) {
     const p = particles[i];
@@ -885,61 +1119,124 @@ function drawParticles(dt) {
 }
 
 /* ---------------- RETRO PIXEL-ART PROGRAMMER SPRITE ---------------- */
-// Drawn at tiny native resolution, then scaled up with smoothing OFF —
-// this is the classic trick that gives genuine chunky 8-bit sprite look.
-const SPR_W = 24, SPR_H = 30;
+// Built procedurally — rounded ellipse/trapezoid regions with 3-tone
+// shading (base/shadow/highlight from a fixed light direction) plus edge
+// dithering — instead of hand-placed flat rectangles. This is what gives
+// a rounded, polished pixel-art look instead of a blocky silhouette,
+// while still rendering at tiny native resolution and scaling up with
+// smoothing OFF for the classic chunky 8-bit pop.
+const SPR_W = 32, SPR_H = 40;
 const spriteCanvas = document.createElement('canvas');
 spriteCanvas.width = SPR_W; spriteCanvas.height = SPR_H;
 const spriteCtx = spriteCanvas.getContext('2d');
 spriteCtx.imageSmoothingEnabled = false;
 
+const SPR_LIGHT = { x: 0.72, y: -0.68 }; // light source: upper-right
+function sprHex(h) { const v = parseInt(h.slice(1), 16); return [(v >> 16) & 255, (v >> 8) & 255, v & 255]; }
+function sprShade(base, shadow, hi, nx, ny, x, y, hiT = 0.35, loT = -0.25, band = 0.07) {
+  const f = nx * SPR_LIGHT.x + ny * SPR_LIGHT.y;
+  if (f > hiT + band) return sprHex(hi);
+  if (f > hiT - band) return ((x + y) % 2 === 0) ? sprHex(hi) : sprHex(base);
+  if (f < loT - band) return sprHex(shadow);
+  if (f < loT + band) return ((x + y) % 2 === 0) ? sprHex(shadow) : sprHex(base);
+  return sprHex(base);
+}
+
 function drawProgrammerSprite(handStep) {
-  const sc = spriteCtx;
-  sc.clearRect(0, 0, SPR_W, SPR_H);
+  const img = spriteCtx.createImageData(SPR_W, SPR_H);
+  const d = img.data;
+  function put(x, y, rgb) {
+    x = Math.round(x); y = Math.round(y);
+    if (x < 0 || x >= SPR_W || y < 0 || y >= SPR_H) return;
+    const i = (y * SPR_W + x) * 4;
+    d[i] = rgb[0]; d[i + 1] = rgb[1]; d[i + 2] = rgb[2]; d[i + 3] = 255;
+  }
 
-  // hoodie — staircase silhouette (authentic pixel-art construction)
-  sc.fillStyle = '#3b3b58';
-  sc.fillRect(4, 14, 16, 2);
-  sc.fillRect(2, 16, 20, 2);
-  sc.fillRect(0, 18, 24, 12);
-  sc.fillStyle = '#25253a'; // shade
-  sc.fillRect(0, 18, 4, 12);
-  sc.fillRect(2, 16, 2, 2);
+  const hoodieBase = '#3b3b58', hoodieShadow = '#23233a', hoodieHi = '#57578c';
+  const hairBase = '#2b1d14', hairShadow = '#1c130d', hairHi = '#4a331f';
+  const skinBase = '#eab676', skinShadow = '#c98f56', skinHi = '#ffd9a0';
+  const cupBase = '#e63946', cupShadow = '#b32635', cupHi = '#ff8a94';
 
-  // drawstrings
-  sc.fillStyle = '#111';
-  sc.fillRect(10, 14, 1, 4);
-  sc.fillRect(13, 14, 1, 4);
+  // hair — rounded ellipse, back of the head (no face = no facing ambiguity)
+  const cx0 = 16, cy0 = 9, rx = 10, ry = 9;
+  for (let y = 0; y <= 18; y++) {
+    for (let x = 0; x < SPR_W; x++) {
+      const nx = (x - cx0) / rx, ny = (y - cy0) / ry;
+      if (nx * nx + ny * ny <= 1) put(x, y, sprShade(hairBase, hairShadow, hairHi, nx, ny, x, y));
+    }
+  }
+  // headphone band arching over the top of the head
+  for (let x = 6; x <= 26; x++) {
+    const nx = (x - cx0) / (rx + 1);
+    const yArc = cy0 - Math.sqrt(Math.max(0, 1 - nx * nx)) * (ry + 1);
+    put(x, yArc, [21, 21, 21]);
+    put(x, yArc + 1, [15, 15, 15]);
+  }
+  // ear cups
+  [[7, 12], [25, 12]].forEach(([ccx, ccy]) => {
+    for (let y = ccy - 4; y <= ccy + 4; y++) {
+      for (let x = ccx - 3; x <= ccx + 3; x++) {
+        const nx = (x - ccx) / 3, ny = (y - ccy) / 4;
+        if (nx * nx + ny * ny <= 1) put(x, y, sprShade(cupBase, cupShadow, cupHi, nx, ny, x, y, 0.3, -0.2, 0.08));
+      }
+    }
+  });
 
-  // neck + head
-  sc.fillStyle = '#eab676';
-  sc.fillRect(10, 11, 4, 3);
-  sc.fillRect(6, 2, 12, 10);
+  // neck
+  for (let y = 16; y <= 19; y++) {
+    const hw = 3 - (y - 16) * 0.2;
+    for (let x = 16 - hw; x <= 16 + hw; x++) {
+      put(x, y, sprShade(skinBase, skinShadow, skinHi, (x - 16) / Math.max(hw, 0.6), 0.2, x, y));
+    }
+  }
 
-  // hair
-  sc.fillStyle = '#2b1d14';
-  sc.fillRect(5, 0, 14, 4);
-  sc.fillRect(5, 4, 2, 4);
-  sc.fillRect(17, 4, 2, 4);
+  // hood collar (flares outward like real fabric)
+  for (let y = 17; y <= 21; y++) {
+    const hw = 9 + (y - 17) * 1.3;
+    for (let x = 16 - hw; x <= 16 + hw; x++) {
+      put(x, y, sprShade(hoodieBase, hoodieShadow, hoodieHi, (x - 16) / hw, (y - 19) / 4, x, y));
+    }
+  }
 
-  // headphones
-  sc.fillStyle = '#111';
-  sc.fillRect(5, 1, 14, 2);
-  sc.fillStyle = '#e63946';
-  sc.fillRect(3, 6, 3, 6);
-  sc.fillRect(18, 6, 3, 6);
+  // torso + center back seam
+  for (let y = 21; y <= 34; y++) {
+    const hw = 14 - Math.max(0, y - 29) * 0.55;
+    for (let x = 16 - hw; x <= 16 + hw; x++) {
+      const rgb = sprShade(hoodieBase, hoodieShadow, hoodieHi, (x - 16) / hw, (y - 27) / 7, x, y);
+      put(x, y, Math.abs(x - 16) < 0.6 ? [rgb[0] - 22, rgb[1] - 22, rgb[2] - 22] : rgb);
+    }
+  }
+  // hood drawstrings hanging down the back
+  for (let y = 20; y <= 27; y++) {
+    put(15, y, [16, 16, 26]);
+    put(17.5, y, [16, 16, 26]);
+  }
 
-  // glasses catching screen glow
-  sc.fillStyle = '#8ecae6';
-  sc.fillRect(8, 8, 3, 3);
-  sc.fillRect(13, 8, 3, 3);
-  sc.fillStyle = '#111';
-  sc.fillRect(11, 9, 2, 1);
+  // arms — angled inward toward the keyboard, connected to the torso —
+  // plus hands that alternate up/down for the typing animation
+  for (const side of [-1, 1]) {
+    for (let y = 21; y <= 32; y++) {
+      const t = (y - 21) / 11;
+      const cxAtY = (16 + side * 15) + ((16 + side * 12.5) - (16 + side * 15)) * t;
+      for (let dx = -2; dx <= 2; dx++) {
+        const rel = dx * side;
+        const rgb = rel < -1 ? sprHex(hoodieShadow) : rel > 1 ? sprHex(hoodieHi) : sprHex(hoodieBase);
+        put(cxAtY + dx, y, rgb);
+      }
+    }
+    const handX = 16 + side * 12.5;
+    const handY = 34 + (side === -1 ? -handStep : handStep);
+    for (let dy = -2; dy <= 2; dy++) {
+      for (let dx = -2; dx <= 2; dx++) {
+        if (dx * dx + dy * dy <= 5.2) {
+          const rgb = (dx + dy < -1) ? sprHex(skinHi) : (dx + dy > 1) ? sprHex(skinShadow) : sprHex(skinBase);
+          put(handX + dx, handY + dy, rgb);
+        }
+      }
+    }
+  }
 
-  // hands — step between two positions for a chunky typing bounce
-  sc.fillStyle = '#eab676';
-  sc.fillRect(1, 27 - handStep, 3, 3);
-  sc.fillRect(20, 27 + handStep, 3, 3);
+  spriteCtx.putImageData(img, 0, 0);
 }
 
 function drawDeskAndProgrammer() {
@@ -975,10 +1272,13 @@ function drawDeskAndProgrammer() {
   ctx.fillRect(cx - 80, deskY - 40, 160, 110);
 
   drawProgrammerSprite(handStep);
-  const SCALE = 5;
+  // SCALE + vertical offset are tuned so the sprite's hand-row lands
+  // inside the keyboard's vertical band (kbY .. kbY+kh) instead of below
+  // it — that gap below the keyboard was the "floating hands" problem.
+  const SCALE = 3.75;
   const destW = SPR_W * SCALE, destH = SPR_H * SCALE;
   const destX = cx - destW / 2;
-  const destY = deskY - 40 + bobStep;
+  const destY = deskY - 85 + bobStep;
   ctx.imageSmoothingEnabled = false;
   ctx.drawImage(spriteCanvas, 0, 0, SPR_W, SPR_H, destX, destY, destW, destH);
   ctx.imageSmoothingEnabled = true;
@@ -999,7 +1299,10 @@ function update(time = 0) {
     if (b.squashed) continue;
     b.y += speed * b.speedMult;
     b.wobble += 0.15;
-    if (b.y > SCREEN_BOTTOM - 6) { crash(); return; }
+    if (b.y > SCREEN_BOTTOM - 6) {
+      if (b.type === 'trap') { b.squashed = true; continue; } // safely avoided
+      crash(); return;
+    }
   }
   bugs = bugs.filter(b => !b.squashed);
 
@@ -1030,8 +1333,11 @@ async function startGame() {
   score = 0; combo = 0; bestCombo = 0;
   baseSpeed = 0; spawnTimer = 0; spawnInterval = 1400;
   lastTime = 0; typeWobble = 0;
-  milestone20Applied = false; spidersUnlocked = false;
+  spidersSeen = false;
+  rescueCharged = false;
+  document.getElementById('rescueBtn').classList.remove('show');
   document.getElementById('score').textContent = '0';
+  updateComboDisplay(false, false);
   updateRankUI();
   await loadHighScore();
   running = true;
@@ -1083,10 +1389,16 @@ document.getElementById('backToMenuBtn').addEventListener('click', () => showScr
 document.getElementById('leaderboardBtn').addEventListener('click', openLeaderboard);
 document.getElementById('resultLeaderboardBtn').addEventListener('click', openLeaderboard);
 document.getElementById('lbBackBtn').addEventListener('click', () => showScreen('menu'));
+document.getElementById('rescueBtn').addEventListener('click', performRescue);
 document.getElementById('soundBtn').addEventListener('click', (e) => {
   muted = !muted;
   e.target.textContent = muted ? '🔇 صدا: خاموش' : '🔊 صدا: روشن';
   if (!muted) ensureAudio();
+});
+document.getElementById('hapticsBtn').addEventListener('click', (e) => {
+  hapticsEnabled = !hapticsEnabled;
+  e.target.textContent = hapticsEnabled ? '📳 ویبره: روشن' : '📴 ویبره: خاموش';
+  if (hapticsEnabled) vibrate(10); // quick confirmation buzz so it's obvious it's on
 });
 document.getElementById('nameInput').addEventListener('input', () => {
   document.getElementById('nameField').classList.remove('error');
