@@ -6,17 +6,24 @@
 <meta name="theme-color" content="#0c0c10">
 <title>Bug Squasher</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;600;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;600;800;900&family=Lalezar&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <style>
   :root {
     --bg: #1e1e1e;
     --panel: #252526;
     --line: #4ec9b0;
     --line2: #9cdcfe;
-    --bug: #e74c3c;
-    --crash: #ff3b3b;
+    --bug: #c0392b;
+    --crash: var(--bug);
     --text: #d4d4d4;
     --accent: #ffcc00;
+    /* Single brand red for the whole game: in-game "danger" text (crash
+       card, TERMINATED status, combo-reset, error states) and the action
+       buttons all pull from --bug, so they read as one consistent color.
+       --line/--line2 stay reserved for the IDE-themed backdrop (borders,
+       stack trace). */
+    --cta: var(--bug);
+    --cta-ink: #fff3ee;
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; }
   body {
@@ -36,15 +43,20 @@
   .hud {
     display: flex;
     justify-content: space-between;
+    align-items: baseline;
+    box-sizing: border-box;
     width: 360px;
     max-width: 92vw;
-    margin-bottom: 8px;
+    padding: 0 10px;
+    margin: 0 auto 8px;
     font-size: 13px;
     font-family: 'JetBrains Mono', monospace;
+    gap: 10px;
   }
-  .hud .rank { color: var(--line2); font-size: 11px; }
-  .hud .score { color: var(--accent); font-weight: 700; }
-  .hud .high { color: #888; font-size: 11px; }
+  .hud-left { display: flex; align-items: baseline; gap: 8px; min-width: 0; overflow: hidden; }
+  .hud .rank { color: var(--accent); font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+  .hud .score { color: var(--accent); font-weight: 700; flex-shrink: 0; }
+  .hud .high { color: #888; font-size: 11px; flex-shrink: 0; white-space: nowrap; }
 
   /* Laptop bezel */
   .laptop {
@@ -145,6 +157,10 @@
     transition: opacity 0.2s, transform 0.2s;
     z-index: 6;
     cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
   }
   .rescueBtn.show {
     opacity: 1;
@@ -156,6 +172,25 @@
     0%, 100% { box-shadow: 0 0 0 0 rgba(156,220,254,0.5); }
     50% { box-shadow: 0 0 0 8px rgba(156,220,254,0); }
   }
+
+  .howto-list {
+    list-style: none;
+    margin: 0 0 18px;
+    padding: 0;
+    text-align: right;
+  }
+  .howto-list li {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    color: #ccc;
+    font-size: 13px;
+    line-height: 1.7;
+    padding: 8px 0;
+    border-bottom: 1px solid #2a2a2c;
+  }
+  .howto-list li:last-child { border-bottom: none; }
+  .howto-list .btn-icon { font-size: 15px; margin-top: 1px; }
 
   .hint {
     text-align: center;
@@ -184,6 +219,38 @@
     pointer-events: auto;
     transition: opacity 0.25s ease, visibility 0s linear 0s;
   }
+  /* Splash is the very first thing painted, so it gets its own treatment:
+     solid app background (not a dark scrim over other UI), no dialog
+     framing, safe-area-aware padding for notches/gesture bars, and a
+     higher stacking order since it must always sit above everything
+     else during boot. */
+  #splashScreen {
+    background: var(--bg);
+    z-index: 100;
+    padding: max(20px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right)) max(20px, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left));
+  }
+  .splash-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    max-width: 320px;
+    width: 100%;
+    text-align: center;
+  }
+  .splash-spinner {
+    width: 26px;
+    height: 26px;
+    border: 3px solid rgba(255,255,255,0.15);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: splashSpin 0.8s linear infinite;
+  }
+  @keyframes splashSpin { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) {
+    .splash-spinner { animation: none; }
+  }
+  .splash-status { color: #888; font-size: 12px; }
   .overlay .card {
     transform: scale(0.94) translateY(6px);
     transition: transform 0.25s ease;
@@ -227,40 +294,107 @@
   .stackTrace .k { color: #777; }
   .stackTrace .v { color: var(--accent); }
   button.restart {
-    background: var(--line);
-    color: #111;
-    border: none;
+    background: var(--cta);
+    color: var(--cta-ink);
+    border: 1.5px solid var(--accent);
     padding: 12px 26px;
     border-radius: 6px;
-    font-size: 14px;
-    font-weight: bold;
+    font-size: 15px;
+    font-weight: 800;
     cursor: pointer;
     font-family: 'Vazirmatn', sans-serif;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    text-align: center;
   }
   button.restart:active { opacity: 0.85; }
+
+  /* Icon + label are separate flex children so their order on screen is
+     controlled by CSS (deterministic, RTL-aware), never by the Unicode
+     bidi algorithm resolving a raw "icon + Persian text" string — that
+     was the source of the inconsistent icon placement across devices. */
+  .btn-icon { flex-shrink: 0; line-height: 1; display: inline-flex; }
+  .btn-icon svg { display: block; }
+  .btn-label { line-height: 1; }
+  .btn-icon[dir="ltr"] { unicode-bidi: isolate; }
+  .ltr-inline {
+    unicode-bidi: isolate;
+    direction: ltr;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.95em;
+  }
 
   .gameplay-ui { display: none; flex-direction: column; align-items: center; width: 100%; }
   .gameplay-ui.active { display: flex; }
 
-  .btn-outline {
-    background: transparent;
-    color: var(--text);
-    border: 1px solid #444;
+  /* button.restart.btn-outline (type+2 classes) intentionally has higher
+     specificity than button.restart alone, so these overrides reliably win
+     instead of being silently discarded — that mismatch was why "چطور بازی
+     کنم؟" and "جدول امتیازات" rendered solid instead of outlined. */
+  /* Outline buttons now share the same solid red + gold border language
+     as the primary CTA — the "outline" class name stays for markup/JS
+     compatibility but no longer means "transparent". */
+  button.restart.btn-outline {
+    background: var(--cta);
+    color: var(--cta-ink);
+    border: 1.5px solid var(--accent);
   }
   .btn-ghost {
     background: transparent;
-    color: #888;
+    color: #999;
     border: none;
-    font-size: 13px;
+    font-family: 'Vazirmatn', sans-serif;
+    font-size: 14px;
+    font-weight: 800;
     padding: 12px 10px;
     min-height: 44px;
+    border-radius: 6px;
     display: flex;
     align-items: center;
     justify-content: center;
+    gap: 8px;
     width: 100%;
+    text-align: center;
   }
-  .menu-logo { font-size: 40px; margin-bottom: 4px; }
-  .menu-title { color: var(--accent); margin: 0 0 4px; font-size: 20px; }
+  .menu-logo { font-size: 42px; margin-bottom: 4px; line-height: 1; }
+  .btn-exit {
+    background: transparent;
+    color: var(--bug);
+    border: none;
+    font-family: 'Vazirmatn', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    padding: 10px;
+    min-height: 40px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: 100%;
+    text-align: center;
+    margin-top: 6px;
+    opacity: 0.85;
+  }
+  .btn-exit:active { opacity: 1; }
+  .exit-actions { display: flex; gap: 10px; margin-top: 4px; }
+  .exit-actions button { flex: 1; }
+  button.exit-danger {
+    background: var(--bug);
+    color: var(--cta-ink);
+    border: 1.5px solid var(--bug);
+  }
+  .menu-title {
+    color: var(--accent);
+    margin: 0 0 4px;
+    font-size: 26px;
+    font-family: 'Lalezar', 'Vazirmatn', sans-serif;
+    font-weight: 400;
+    letter-spacing: 0.5px;
+  }
   .name-field { width: 100%; margin: 4px 0 14px; text-align: right; }
   .name-field label { display: block; font-size: 11px; color: #888; margin-bottom: 6px; }
   .name-field input {
@@ -275,7 +409,7 @@
     font-family: 'Vazirmatn', sans-serif;
     text-align: right;
   }
-  .name-field input:focus { outline: none; border-color: var(--line); }
+  .name-field input:focus { outline: none; border-color: var(--bug); }
   .name-field .warn { color: var(--crash); font-size: 11px; margin-top: 6px; display: none; }
   .name-field.error input { border-color: var(--crash); }
   .name-field.error .warn { display: block; }
@@ -286,10 +420,19 @@
     border-radius: 6px;
     padding: 8px 10px;
     font-size: 12px;
-    color: var(--accent);
     margin-bottom: 12px;
+    text-align: right;
+  }
+  .lb-you-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
     font-family: 'JetBrains Mono', monospace;
   }
+  .lb-you-row .rk { color: var(--accent); width: 26px; flex-shrink: 0; }
+  .lb-you-row .nm { flex: 1; color: var(--text); font-family: 'Vazirmatn', sans-serif; font-size: 13px; text-align: right; }
+  .lb-you-row .sc { color: var(--accent); font-weight: 700; }
+  .lb-you-gap { color: #ccc; font-size: 11px; margin-top: 6px; }
   .lb-list {
     max-height: 260px;
     overflow-y: auto;
@@ -311,7 +454,7 @@
   .lb-row .rk { color: #666; width: 26px; flex-shrink: 0; }
   .lb-row .nm {
     flex: 1;
-    color: var(--line2);
+    color: var(--text);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -325,6 +468,19 @@
   .lb-row.top2 .rk { color: #c0c0c0; }
   .lb-row.top3 .rk { color: #cd7f32; }
   .lb-empty { color: #666; font-size: 12px; padding: 20px 10px; text-align: center; }
+  .lb-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    font-size: 11px;
+    color: #888;
+    border-bottom: 1px solid #333;
+    font-family: 'Vazirmatn', sans-serif;
+  }
+  .lb-header .rk { width: 26px; flex-shrink: 0; }
+  .lb-header .nm { flex: 1; text-align: right; }
+  .lb-header .sc { font-weight: 700; }
   .result-score {
     font-size: 30px;
     font-weight: 800;
@@ -337,7 +493,7 @@
     color: #888;
     margin-bottom: 14px;
   }
-  .btn-row { display: flex; gap: 10px; margin-top: 4px; }
+  .btn-row { display: flex; gap: 10px; margin-top: 4px; justify-content: center; }
   .btn-row button { flex: 1; }
 
   .flash {
@@ -375,16 +531,17 @@
 
   <!-- SPLASH -->
   <div class="overlay show" id="splashScreen">
-    <div class="card" style="border-color: var(--line);">
+    <div class="splash-content">
       <div class="menu-logo">🐞</div>
       <h2 class="menu-title">Bug Squasher</h2>
-      <div style="color:#888; font-size:12px;">در حال بارگذاری...</div>
+      <div class="splash-spinner" aria-hidden="true"></div>
+      <div class="splash-status" aria-live="polite">در حال آماده‌سازی...</div>
     </div>
   </div>
 
   <!-- MAIN MENU -->
   <div class="overlay" id="menuScreen">
-    <div class="card" style="border-color: var(--line);">
+    <div class="card" style="border-color: var(--accent);">
       <div class="menu-logo">🐞</div>
       <h2 class="menu-title">Bug Squasher</h2>
       <p style="color:#888; font-size:12px; margin:0 0 14px;">قبل از کرش‌کردن کدت، باگ‌ها رو له کن</p>
@@ -394,11 +551,36 @@
         <div class="warn">برای شروع بازی، اول اسمت رو بنویس</div>
       </div>
       <div class="btn-row" style="flex-direction: column;">
-        <button class="restart" id="startBtn">▶ شروع بازی</button>
-        <button class="restart btn-outline" id="howToBtn">؟ چطور بازی کنم</button>
-        <button class="restart btn-outline" id="leaderboardBtn">🏆 جدول امتیازات</button>
-        <button class="btn-ghost" id="soundBtn">🔊 صدا: روشن</button>
-        <button class="btn-ghost" id="hapticsBtn">📳 ویبره: روشن</button>
+        <button class="restart" id="startBtn"><span class="btn-label">شروع بازی</span></button>
+        <button class="restart btn-outline" id="howToBtn"><span class="btn-label">چطور بازی کنم؟</span></button>
+        <button class="restart btn-outline" id="leaderboardBtn"><span class="btn-label">جدول امتیازات</span></button>
+        <button class="restart btn-outline" id="settingsBtn"><span class="btn-label">تنظیمات</span></button>
+        <button class="btn-exit" id="exitBtn"><span class="btn-label">خروج</span></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SETTINGS -->
+  <div class="overlay" id="settingsScreen">
+    <div class="card">
+      <h2 class="menu-title" style="margin-top:0;">تنظیمات</h2>
+      <div class="btn-row" style="flex-direction: column;">
+        <button class="btn-ghost" id="soundBtn"><span class="btn-label" id="soundLabel">صدا: روشن</span><span class="btn-icon" id="soundIcon"><svg viewBox="0 0 18 18" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v4h3l4 3V4L6 7H3z"/><path d="M12.3 6a4 4 0 0 1 0 6"/><path d="M14.3 4a7 7 0 0 1 0 10" opacity="0.55"/></svg></span></button>
+        <button class="btn-ghost" id="hapticsBtn"><span class="btn-label" id="hapticsLabel">ویبره: روشن</span><span class="btn-icon" id="hapticsIcon"><svg viewBox="0 0 18 18" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="3" width="6" height="12" rx="1.4"/><line x1="2.6" y1="6" x2="2.6" y2="12"/><line x1="15.4" y1="6" x2="15.4" y2="12"/></svg></span></button>
+      </div>
+      <button class="btn-ghost" id="settingsBackBtn" style="margin-top:8px;">بازگشت به منو</button>
+    </div>
+  </div>
+
+  <!-- EXIT CONFIRM -->
+  <div class="overlay" id="exitScreen">
+    <div class="card" style="border-color: var(--bug);">
+      <h2 class="menu-title" style="margin-top:0;">خروج از بازی</h2>
+      <p style="color:#999; font-size:13px; margin:0 0 16px;">مطمئنی می‌خوای از بازی خارج بشی؟</p>
+      <p id="exitHint" style="display:none; color:#888; font-size:11px; margin:-8px 0 14px;">برای خروج کامل، دکمه بازگشت گوشی رو بزن</p>
+      <div class="exit-actions">
+        <button class="btn-ghost" id="exitCancelBtn" style="border: 1.5px solid #3a3a3e;"><span class="btn-label">انصراف</span></button>
+        <button class="restart exit-danger" id="exitConfirmBtn"><span class="btn-label">خروج</span></button>
       </div>
     </div>
   </div>
@@ -407,16 +589,16 @@
   <div class="overlay" id="howtoScreen">
     <div class="card">
       <h2 class="menu-title" style="margin-top:0;">راهنمای بازی</h2>
-      <p style="color:#ccc; font-size:13px; line-height:2; text-align:right; margin-bottom:18px;">
-        🐞 روی کفش‌دوزک و عنکبوت‌ها مستقیم ضربه بزن<br>
-        ⏱️ قبل از رسیدنشون به خط قرمز، لهشون کن<br>
-        💥 اگه یکی رد بشه، کدت کرش می‌کنه و بازی تمومه<br>
-        ✅ به تیک‌های سبز (کد سالم) دست نزن — کامبوت رو صفر می‌کنه<br>
-        🧹 با کامبوی ۸+ دکمه‌ی Ctrl+Z فعال میشه — صفحه رو پاک می‌کنه<br>
-        🕷️ بعد از امتیاز ۵۰ مراقب عنکبوت‌های سریع باش
-      </p>
-      <button class="restart" id="howtoStartBtn">▶ باشه، بزن بریم</button>
-      <button class="btn-ghost" id="howtoBackBtn" style="display:block; margin:8px auto 0;">بازگشت به منو</button>
+      <ul class="howto-list">
+        <li><span class="btn-icon"><svg viewBox="0 0 18 18" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M6 8 L3.5 6.5"/><path d="M6 9.5 L2.8 9.5"/><path d="M6 11 L3.5 12.5"/><path d="M12 8 L14.5 6.5"/><path d="M12 9.5 L15.2 9.5"/><path d="M12 11 L14.5 12.5"/><path d="M7.3 5 Q6.5 3.2 5 2.4"/><path d="M10.7 5 Q11.5 3.2 13 2.4"/><ellipse cx="9" cy="9.5" rx="3.4" ry="4.3" fill="currentColor" stroke="none"/><circle cx="9" cy="4.6" r="1.7" fill="currentColor" stroke="none"/></svg></span><span class="btn-label">روی کفش‌دوزک و عنکبوت‌ها مستقیم ضربه بزن</span></li>
+        <li><span class="btn-icon"><svg viewBox="0 0 18 18" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="10" r="6.2"/><path d="M9 6.5V10l3 2"/><line x1="7" y1="2" x2="11" y2="2"/></svg></span><span class="btn-label">قبل از رسیدنشون به خط قرمز، لهشون کن</span></li>
+        <li><span class="btn-icon"><svg viewBox="0 0 18 18" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3l6.5 11H2.5L9 3z"/><line x1="9" y1="8" x2="9" y2="11.3"/><circle cx="9" cy="13.3" r="0.9" fill="currentColor" stroke="none"/></svg></span><span class="btn-label">اگه یکی رد بشه، کدت کرش می‌کنه و بازی تمومه</span></li>
+        <li><span class="btn-icon"><svg viewBox="0 0 18 18" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 9.5 L7 13 L14.5 4.5"/></svg></span><span class="btn-label">به تیک‌های سبز (کد سالم) دست نزن — کامبوت رو صفر می‌کنه</span></li>
+        <li><span class="btn-icon"><svg viewBox="0 0 18 18" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h7a3.5 3.5 0 0 1 0 7H8"/><path d="M4 8 7 5"/><path d="M4 8 7 11"/></svg></span><span class="btn-label">هر ۸ ضربه‌ی موفق، دکمه‌ی <span class="ltr-inline">Ctrl+Z</span> فعال میشه — صفحه رو پاک می‌کنه</span></li>
+        <li><span class="btn-icon"><svg viewBox="0 0 18 18" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M6.5 7 L3 5"/><path d="M6.5 9 L2.6 9"/><path d="M6.5 11 L3 13"/><path d="M11.5 7 L15 5"/><path d="M11.5 9 L15.4 9"/><path d="M11.5 11 L15 13"/><circle cx="9" cy="9" r="3.3" fill="currentColor" stroke="none"/></svg></span><span class="btn-label">بعد از امتیاز ۵۰ مراقب عنکبوت‌های سریع باش</span></li>
+      </ul>
+      <button class="restart" id="howtoStartBtn"><span class="btn-label">باشه، بزن بریم</span></button>
+      <button class="btn-ghost" id="howtoBackBtn" style="margin-top:8px;">بازگشت به منو</button>
     </div>
   </div>
 
@@ -426,8 +608,10 @@
     <p class="sub">مستقیم روی کفش‌دوزک بزن قبل از رسیدن به خط قرمز کد</p>
 
     <div class="hud" dir="ltr">
-      <span class="rank" id="rank">Junior Debugger</span>
-      <span class="score" id="score">0</span>
+      <div class="hud-left">
+        <span class="rank" id="rank">Junior Debugger</span>
+        <span class="score" id="score">0</span>
+      </div>
       <span class="high">HI: <span id="highscore">0</span></span>
     </div>
 
@@ -437,7 +621,7 @@
         <canvas id="game" width="360" height="480"></canvas>
         <div class="combo" id="combo">Combo x0</div>
         <div class="toast" id="toast">🕷️ عنکبوت سفید وارد شد!</div>
-        <button class="rescueBtn" id="rescueBtn">🧹 Ctrl+Z</button>
+        <button class="rescueBtn" id="rescueBtn"><span class="btn-icon"><svg viewBox="0 0 18 18" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h7a3.5 3.5 0 0 1 0 7H8"/><path d="M4 8 7 5"/><path d="M4 8 7 11"/></svg></span><span class="btn-label ltr-inline">Ctrl+Z</span></button>
       </div>
       <div class="laptop-base"></div>
     </div>
@@ -450,12 +634,17 @@
   <!-- LEADERBOARD -->
   <div class="overlay" id="leaderboardScreen">
     <div class="card">
-      <h2 class="menu-title" style="margin-top:0;">🏆 جدول امتیازات</h2>
-      <div class="lb-you" id="lbYou" style="display:none;"></div>
+      <h2 class="menu-title" style="margin-top:0;"><span class="btn-label">جدول امتیازات</span></h2>
+      <div class="lb-header">
+        <span class="rk"></span>
+        <span class="nm">نام</span>
+        <span class="sc">امتیاز</span>
+      </div>
       <div class="lb-list" id="lbList">
         <div class="lb-empty">در حال بارگذاری...</div>
       </div>
-      <button class="restart" id="lbBackBtn">بازگشت</button>
+      <div class="lb-you" id="lbYou" style="display:none;"></div>
+      <button class="btn-ghost" id="lbBackBtn" style="margin-top:8px;">بازگشت به منو</button>
     </div>
   </div>
 
@@ -474,10 +663,10 @@
         <div><span class="k">&gt; Status:</span> <span class="v" style="color:var(--crash)">TERMINATED</span></div>
       </div>
       <div class="btn-row">
-        <button class="restart btn-outline" id="backToMenuBtn">🏠 منو</button>
-        <button class="restart" id="replayBtn">▶ اجرای مجدد</button>
+        <button class="restart btn-outline" id="backToMenuBtn"><span class="btn-label">منو</span></button>
+        <button class="restart" id="replayBtn"><span class="btn-label">اجرای مجدد</span></button>
       </div>
-      <button class="restart btn-outline" id="resultLeaderboardBtn" style="width:100%; margin-top:10px;">🏆 مشاهده جدول امتیازات</button>
+      <button class="restart btn-outline" id="resultLeaderboardBtn" style="width:100%; margin-top:10px;"><span class="btn-label">مشاهده جدول امتیازات</span></button>
     </div>
   </div>
 
@@ -526,6 +715,7 @@ let codeOffset = 0;
 let bugIdCounter = 0;
 let typeWobble = 0;
 let spidersSeen = false;
+let trapsSeen = false;
 
 // Smooth difficulty curve tuning — pure functions of score, no step jumps.
 const SPEED_PER_POINT = 0.028;
@@ -535,6 +725,13 @@ const MIN_SPAWN_INTERVAL = 420;
 const INTERVAL_PER_POINT = 8;
 let rescueCharged = false;
 const RESCUE_THRESHOLD = 8;
+// Counts squashes toward the NEXT Ctrl+Z charge. Kept separate from the
+// on-screen combo counter so the "every 8 hits" rule repeats identically
+// every time — it resets to 0 the moment a charge is granted (and again
+// when it's spent, and when a trap hit breaks the combo) instead of
+// depending on the ever-growing combo number, which only lined up with
+// the threshold the first time it was reached.
+let rescueProgress = 0;
 
 /* ---------------- AUDIO (synthesized, no files needed) ---------------- */
 let audioCtx = null;
@@ -700,25 +897,19 @@ function leaderboardKeyFor(name) {
 }
 async function syncPlayerStats(name, sessionScore) {
   if (!db || !name) return null;
-  const key = leaderboardKeyFor(name);
   try {
-    const { data: existing } = await db
-      .from('leaderboard')
-      .select('score, total_bugs')
-      .eq('name_key', key)
-      .maybeSingle();
-    const prevBest = existing ? existing.score : 0;
-    const prevTotal = existing ? (existing.total_bugs || 0) : 0;
-    const newBest = Math.max(prevBest, sessionScore);
-    const newTotal = prevTotal + sessionScore;
-    await db.from('leaderboard').upsert({
-      name_key: key,
-      name: name.trim(),
-      score: newBest,
-      total_bugs: newTotal,
-      updated_at: new Date().toISOString()
+    // Score submission goes through the `submit_score` Postgres function
+    // (SECURITY DEFINER) instead of writing to the `leaderboard` table
+    // directly. The table's RLS policy only allows SELECT for anon/public,
+    // so this RPC call is the only way to write a score — and the function
+    // itself re-validates the name and score range server-side. This closes
+    // off direct-write score injection via the exposed anon key.
+    const { data, error } = await db.rpc('submit_score', {
+      p_name: name.trim(),
+      p_score: sessionScore
     });
-    return newTotal;
+    if (error) throw error;
+    return data; // new total_bugs, returned by the function
   } catch (e) {
     return null; // best-effort, never blocks the game
   }
@@ -735,13 +926,58 @@ async function fetchLeaderboardEntries() {
   return data || [];
 }
 
+/* Converts Latin digits to Persian digits for display — used only in
+   user-facing leaderboard text, not the monospace/LTR gameplay HUD,
+   which intentionally keeps its terminal-style Latin digits. */
+function toFaDigits(input) {
+  const fa = ['۰','۱','۲','۳','۴','۵','۶','۷','۸','۹'];
+  return String(input).replace(/[0-9]/g, (d) => fa[d]);
+}
+
+/* Exact rank/score for the current player, independent of the top-50
+   list — fixes the previous bug where a player ranked outside the
+   fetched top 50 was incorrectly told "no score yet". Also returns the
+   nearest entry above them, so the UI can show "N points to pass X". */
+async function fetchMyStanding(name) {
+  if (!db || !name) return null;
+  const key = leaderboardKeyFor(name);
+  try {
+    const { data: mine } = await db
+      .from('leaderboard')
+      .select('score')
+      .eq('name_key', key)
+      .maybeSingle();
+    if (!mine) return null;
+    const { count } = await db
+      .from('leaderboard')
+      .select('*', { count: 'exact', head: true })
+      .gt('score', mine.score);
+    const rank = (count || 0) + 1;
+    let next = null;
+    if (rank > 1) {
+      const { data: above } = await db
+        .from('leaderboard')
+        .select('name, score')
+        .gt('score', mine.score)
+        .order('score', { ascending: true })
+        .limit(1);
+      next = (above && above[0]) || null;
+    }
+    return { rank, score: mine.score, next };
+  } catch (e) {
+    return null;
+  }
+}
+
+const MEDALS = { 1: '🥇', 2: '🥈', 3: '🥉' };
 function renderLeaderboardRow(entry, rank, isMe) {
   const row = document.createElement('div');
   row.className = 'lb-row' + (isMe ? ' me' : '') + (rank <= 3 ? ' top' + rank : '');
+  const rankLabel = MEDALS[rank] || ('#' + toFaDigits(rank));
   row.innerHTML =
-    '<span class="rk">#' + rank + '</span>' +
+    '<span class="rk">' + rankLabel + '</span>' +
     '<span class="nm"></span>' +
-    '<span class="sc">' + entry.score + '</span>';
+    '<span class="sc">' + toFaDigits(entry.score) + '</span>';
   row.querySelector('.nm').textContent = entry.name;
   return row;
 }
@@ -787,14 +1023,26 @@ async function openLeaderboard() {
     listEl.appendChild(renderLeaderboardRow(entry, rank, isMe));
   });
 
-  if (myRank) {
-    const mine = entries[myRank - 1];
-    youEl.textContent = 'رتبه تو: #' + myRank + ' از ' + entries.length + ' نفر — امتیاز: ' + mine.score;
-    youEl.style.display = 'block';
-  } else if (playerName) {
+  if (!playerName) return;
+
+  const standing = await fetchMyStanding(playerName);
+  if (!standing) {
     youEl.textContent = 'هنوز امتیازی برای «' + playerName + '» ثبت نشده. یه دور بازی کن!';
     youEl.style.display = 'block';
+    return;
   }
+
+  const rankLabel = MEDALS[standing.rank] || ('#' + toFaDigits(standing.rank));
+  let html = '<div class="lb-you-row"><span class="rk">' + rankLabel + '</span>' +
+    '<span class="nm">تو</span><span class="sc">' + toFaDigits(standing.score) + '</span></div>';
+  if (standing.next) {
+    const gap = standing.next.score - standing.score;
+    html += '<div class="lb-you-gap">«' + toFaDigits(gap) + '» امتیاز تا عبور از ' + standing.next.name + '</div>';
+  } else {
+    html += '<div class="lb-you-gap">🔥 صدر جدولی، همینطور ادامه بده!</div>';
+  }
+  youEl.innerHTML = html;
+  youEl.style.display = 'block';
 }
 
 /* ---------------- GAME LOGIC ---------------- */
@@ -825,6 +1073,10 @@ function spawnBug() {
     spidersSeen = true;
     showToast('🕷️ عنکبوت سفید وارد شد!');
   }
+  if (bug.type === 'trap' && !trapsSeen) {
+    trapsSeen = true;
+    showToast('✅ به تیک‌های سبز دست نزن — کد سالمه!');
+  }
   if (score > 50 && Math.random() < 0.25) {
     const otherSide = side === 'left' ? 'right' : 'left';
     const bug2 = makeBug(otherSide, SPAWN_Y - 30);
@@ -832,6 +1084,10 @@ function spawnBug() {
     if (bug2.type === 'spider' && !spidersSeen) {
       spidersSeen = true;
       showToast('🕷️ عنکبوت سفید وارد شد!');
+    }
+    if (bug2.type === 'trap' && !trapsSeen) {
+      trapsSeen = true;
+      showToast('✅ به تیک‌های سبز دست نزن — کد سالمه!');
     }
   }
 }
@@ -887,10 +1143,11 @@ function squashBugAt(px, py) {
   if (target.type === 'trap') {
     // Hitting a passing test / healthy code: punish, don't reward.
     combo = 0;
+    rescueProgress = 0;
     if (rescueCharged) { rescueCharged = false; document.getElementById('rescueBtn').classList.remove('show'); }
     updateComboDisplay(false, true);
     const p = bugPos(target);
-    addParticles(p.x, p.y, '#ff3b3b', 10);
+    addParticles(p.x, p.y, '#c0392b', 10);
     playTrapHit();
     vibrate(40);
     showToast('⚠️ این کد سالم بود! کامبو از دست رفت');
@@ -900,12 +1157,14 @@ function squashBugAt(px, py) {
 
   score += target.points;
   combo++; bestCombo = Math.max(bestCombo, combo);
+  rescueProgress++;
   document.getElementById('score').textContent = score;
   updateRankUI();
   updateComboDisplay(true, false);
   vibrate(10);
-  if (!rescueCharged && combo >= RESCUE_THRESHOLD) {
+  if (!rescueCharged && rescueProgress >= RESCUE_THRESHOLD) {
     rescueCharged = true;
+    rescueProgress = 0;
     document.getElementById('rescueBtn').classList.add('show');
     showToast('🧹 Ctrl+Z آماده‌ست — صفحه رو پاک کن!');
     vibrate([0, 15, 60, 15]);
@@ -941,6 +1200,7 @@ function performRescue() {
   }
   bugs = [];
   rescueCharged = false;
+  rescueProgress = 0;
   document.getElementById('rescueBtn').classList.remove('show');
   playRescue();
   vibrate([0, 20, 40, 20]);
@@ -1334,7 +1594,9 @@ async function startGame() {
   baseSpeed = 0; spawnTimer = 0; spawnInterval = 1400;
   lastTime = 0; typeWobble = 0;
   spidersSeen = false;
+  trapsSeen = false;
   rescueCharged = false;
+  rescueProgress = 0;
   document.getElementById('rescueBtn').classList.remove('show');
   document.getElementById('score').textContent = '0';
   updateComboDisplay(false, false);
@@ -1350,6 +1612,7 @@ function showScreen(name) {
   document.getElementById('menuScreen').classList.remove('show');
   document.getElementById('howtoScreen').classList.remove('show');
   document.getElementById('leaderboardScreen').classList.remove('show');
+  document.getElementById('settingsScreen').classList.remove('show');
   document.getElementById('overlay').classList.remove('show');
   document.getElementById('gameplayUI').classList.remove('active');
 
@@ -1357,6 +1620,7 @@ function showScreen(name) {
   if (name === 'menu') document.getElementById('menuScreen').classList.add('show');
   if (name === 'howto') document.getElementById('howtoScreen').classList.add('show');
   if (name === 'leaderboard') document.getElementById('leaderboardScreen').classList.add('show');
+  if (name === 'settings') document.getElementById('settingsScreen').classList.add('show');
   if (name === 'playing') document.getElementById('gameplayUI').classList.add('active');
   if (name === 'result') {
     document.getElementById('gameplayUI').classList.add('active');
@@ -1389,24 +1653,78 @@ document.getElementById('backToMenuBtn').addEventListener('click', () => showScr
 document.getElementById('leaderboardBtn').addEventListener('click', openLeaderboard);
 document.getElementById('resultLeaderboardBtn').addEventListener('click', openLeaderboard);
 document.getElementById('lbBackBtn').addEventListener('click', () => showScreen('menu'));
+document.getElementById('settingsBtn').addEventListener('click', () => showScreen('settings'));
+document.getElementById('settingsBackBtn').addEventListener('click', () => showScreen('menu'));
 document.getElementById('rescueBtn').addEventListener('click', performRescue);
-document.getElementById('soundBtn').addEventListener('click', (e) => {
+const ICON_SOUND_ON = '<svg viewBox="0 0 18 18" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v4h3l4 3V4L6 7H3z"/><path d="M12.3 6a4 4 0 0 1 0 6"/><path d="M14.3 4a7 7 0 0 1 0 10" opacity="0.55"/></svg>';
+const ICON_SOUND_OFF = '<svg viewBox="0 0 18 18" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v4h3l4 3V4L6 7H3z"/><line x1="12" y1="7" x2="16" y2="11"/><line x1="16" y1="7" x2="12" y2="11"/></svg>';
+const ICON_VIB_ON = '<svg viewBox="0 0 18 18" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="3" width="6" height="12" rx="1.4"/><line x1="2.6" y1="6" x2="2.6" y2="12"/><line x1="15.4" y1="6" x2="15.4" y2="12"/></svg>';
+const ICON_VIB_OFF = '<svg viewBox="0 0 18 18" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="3" width="6" height="12" rx="1.4"/><line x1="3.5" y1="15" x2="14.5" y2="3"/></svg>';
+
+document.getElementById('soundBtn').addEventListener('click', () => {
   muted = !muted;
-  e.target.textContent = muted ? '🔇 صدا: خاموش' : '🔊 صدا: روشن';
+  document.getElementById('soundIcon').innerHTML = muted ? ICON_SOUND_OFF : ICON_SOUND_ON;
+  document.getElementById('soundLabel').textContent = muted ? 'صدا: خاموش' : 'صدا: روشن';
   if (!muted) ensureAudio();
 });
-document.getElementById('hapticsBtn').addEventListener('click', (e) => {
+document.getElementById('hapticsBtn').addEventListener('click', () => {
   hapticsEnabled = !hapticsEnabled;
-  e.target.textContent = hapticsEnabled ? '📳 ویبره: روشن' : '📴 ویبره: خاموش';
+  document.getElementById('hapticsIcon').innerHTML = hapticsEnabled ? ICON_VIB_ON : ICON_VIB_OFF;
+  document.getElementById('hapticsLabel').textContent = hapticsEnabled ? 'ویبره: روشن' : 'ویبره: خاموش';
   if (hapticsEnabled) vibrate(10); // quick confirmation buzz so it's obvious it's on
 });
 document.getElementById('nameInput').addEventListener('input', () => {
   document.getElementById('nameField').classList.remove('error');
 });
 
-// Loading splash, then hand off to the main menu — completes the required MVP flow
-loadPlayerName();
-setTimeout(() => showScreen('menu'), 1200);
+/* ---------------- EXIT GAME ---------------- */
+// Shown as its own overlay on top of the menu (not routed through
+// showScreen, since that hides every other screen — this one should
+// layer over whatever's already open).
+document.getElementById('exitBtn').addEventListener('click', () => {
+  document.getElementById('exitHint').style.display = 'none';
+  document.getElementById('exitScreen').classList.add('show');
+});
+document.getElementById('exitCancelBtn').addEventListener('click', () => {
+  document.getElementById('exitScreen').classList.remove('show');
+});
+document.getElementById('exitConfirmBtn').addEventListener('click', () => {
+  // A web page can't force-quit itself — the exact hook depends on how
+  // this build is packaged. Try the common Android WebView bridge
+  // patterns first, then fall back to window.close() (works for a
+  // window opened by script, e.g. a wrapper that opened this as a tab).
+  try {
+    if (window.Android && typeof window.Android.exitApp === 'function') {
+      window.Android.exitApp();
+      return;
+    }
+    if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.exitApp) {
+      window.webkit.messageHandlers.exitApp.postMessage('exit');
+      return;
+    }
+  } catch (e) { /* no native bridge available — fall through */ }
+  window.close();
+  // Still here after a beat means neither the bridge nor window.close()
+  // actually closed anything (most browsers block script-initiated close
+  // on a tab they didn't open) — let the player know instead of silently
+  // doing nothing. Shown inline in the card itself, since the toast
+  // element lives inside the gameplay screen and isn't visible from the
+  // menu.
+  setTimeout(() => {
+    document.getElementById('exitHint').style.display = 'block';
+  }, 200);
+});
+
+// Splash: always shown for at least MIN_SPLASH_MS so the brand moment
+// never flashes by instantly, but it hands off to the menu the moment
+// real boot work (reading saved name + high score from localStorage)
+// actually finishes — not a fixed delay disconnected from real work.
+const MIN_SPLASH_MS = 500;
+const splashStart = performance.now();
+Promise.all([loadPlayerName(), loadHighScore()]).then(() => {
+  const remaining = Math.max(0, MIN_SPLASH_MS - (performance.now() - splashStart));
+  setTimeout(() => showScreen('menu'), remaining);
+});
 </script>
 </body>
 </html>
