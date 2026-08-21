@@ -1,0 +1,45 @@
+# Dependencies
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Capacitor / Android build output
+android/
+# @capacitor/app generated files
+capacitor.config.json.bak
+
+# Build artifacts
+www/game.obf.js
+www/*.min.js.tmp
+dist/
+build/
+
+# Keystore & signing — NUNCA COMMIT
+*.jks
+*.keystore
+keystore.properties
+*.p12
+*.pem
+
+# Environment & secrets
+.env
+.env.local
+.env.*.local
+*.local
+
+# IDE / OS files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Misc
+.cache/
+temp/
+*.tmp
